@@ -1,0 +1,31 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# C++ build artifacts
+*.o
+*.a
+*.out
+cmake-build-debug/
+cmake-build-release/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# IsoCortex runtime
+*.index
+vectors.bin
+vectors.npy
+metadata.json
+benchmark.log
