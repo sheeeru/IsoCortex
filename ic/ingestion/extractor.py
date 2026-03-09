@@ -46,6 +46,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+from .scanner import ScannedFile
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -139,7 +141,7 @@ class ExtractionResult:
 # Public API
 # ---------------------------------------------------------------------------
 
-def extract(scanned_file: object) -> ExtractionResult:
+def extract(scanned_file: ScannedFile) -> ExtractionResult:
     """
     Dispatch *scanned_file* to the correct format extractor.
 
@@ -154,9 +156,9 @@ def extract(scanned_file: object) -> ExtractionResult:
         Always returns a result object. On failure success=False and
         error_message is populated. This function never raises.
     """
-    path:     Path = scanned_file.absolute_path      # type: ignore[attr-defined]
-    category: str  = scanned_file.format_category    # type: ignore[attr-defined]
-    ext:      str  = scanned_file.extension          # type: ignore[attr-defined]
+    path:     Path = scanned_file.absolute_path
+    category: str  = scanned_file.format_category
+    ext:      str  = scanned_file.extension
 
     logger.debug(
         "[EXTRACTOR] Starting  file=%s  category=%s",
@@ -205,7 +207,7 @@ def extract(scanned_file: object) -> ExtractionResult:
     return result
 
 
-def extract_batch(scanned_files: list) -> list[ExtractionResult]:
+def extract_batch(scanned_files: list[ScannedFile]) -> list[ExtractionResult]:
     """
     Extract text from a list of ScannedFile objects.
 
@@ -227,7 +229,7 @@ def extract_batch(scanned_files: list) -> list[ExtractionResult]:
         logger.info(
             "[EXTRACTOR] Batch %d/%d  file=%s",
             idx, total,
-            sf.absolute_path.name,               # type: ignore[attr-defined]
+            sf.absolute_path.name,
         )
         results.append(extract(sf))
 
@@ -475,6 +477,10 @@ def _extract_docx(path: Path, result: ExtractionResult) -> None:
       - Table cells row-by-row, pipe-separated.
       - Section headers/footers appended.
     """
+    if path.suffix.lower() == ".odt":
+        _fail(result, ".odt extraction not yet supported — convert to .docx first (OOS)")
+        return
+
     try:
         from docx import Document                    # type: ignore[import-untyped]
     except ImportError:
@@ -548,6 +554,10 @@ def _extract_pptx(path: Path, result: ExtractionResult) -> None:
       - Speaker notes appended under [Notes].
       - Empty slides skipped.
     """
+    if path.suffix.lower() == ".odp":
+        _fail(result, ".odp extraction not yet supported — convert to .pptx first (OOS)")
+        return
+
     try:
         from pptx import Presentation               # type: ignore[import-untyped]
     except ImportError:
@@ -834,7 +844,6 @@ def _extract_eml(path: Path, result: ExtractionResult) -> None:
     str | bytes | list | dict.
     """
     try:
-        import email.policy as _email_policy
         raw_bytes = path.read_bytes()
         msg       = email_lib.message_from_bytes(
             raw_bytes,

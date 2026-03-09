@@ -133,7 +133,8 @@ class ScanSummary:
     Attributes
     ----------
     root_directory  : Path             — The directory that was scanned.
-    total_visited   : int              — Every filesystem node visited.
+    total_visited   : int              — Number of *files* visited (not
+                                         directories — dirs are never counted).
     total_accepted  : int              — Files with a supported extension.
     total_skipped   : int              — Files/dirs skipped for any reason.
     skipped_details : list             — Per-skip reason records.
@@ -325,6 +326,7 @@ def scan_directory(
     # ------------------------------------------------------------------
     for entry in _walk(root_path, ignore_dirs, follow_symlinks, summary):
 
+        # Count only files — _walk() yields file paths only, not directories
         summary.total_visited += 1
 
         # ---- Circular / duplicate symlink guard ----------------------
@@ -458,12 +460,6 @@ def _walk(
 
         if is_dir:
             dir_name = entry.name
-
-            # FIX: removed redundant `and dir_name not in {"."}` check
-            # os.scandir never yields "." or ".." entries
-            if dir_name.startswith("."):
-                summary.record_skip(entry_path, "hidden_directory")
-                continue
 
             if dir_name in ignore_dirs:
                 summary.record_skip(
