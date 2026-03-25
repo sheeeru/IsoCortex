@@ -5,7 +5,7 @@ Format-specific text extraction engine.
 
 Responsibilities (FR-1, FR-1b):
   - Accept a ScannedFile from scanner.py and dispatch to the correct
-    format-specific extractor based on format_category.
+    format-specific extractor based on format_category and extension.
   - Extract clean, normalised plain-text from every supported format.
   - Apply FR-1b structured data linearization rules for spreadsheets,
     presentations, word documents, email, and HTML.
@@ -46,8 +46,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-from .scanner import ScannedFile
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -56,8 +54,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MAX_CHARS_PER_DOC: int      = 5_000_000   # 5 million chars ~5 MB of text
-MIN_CONTENT_LENGTH: int     = 3
+MAX_CHARS_PER_DOC: int          = 5_000_000   # ~5 MB of text per chunk
+MIN_CONTENT_LENGTH: int         = 3
 TEXT_ENCODINGS: tuple[str, ...] = (
     "utf-8",
     "utf-8-sig",
@@ -65,6 +63,7 @@ TEXT_ENCODINGS: tuple[str, ...] = (
     "cp1252",
     "iso-8859-1",
 )
+HEADER_SCAN_ROWS: int           = 5           # Rows to scan for best header row
 
 
 # ---------------------------------------------------------------------------
@@ -141,9 +140,13 @@ class ExtractionResult:
 # Public API
 # ---------------------------------------------------------------------------
 
-def extract(scanned_file: ScannedFile) -> ExtractionResult:
+def extract(scanned_file: object) -> ExtractionResult:
     """
     Dispatch *scanned_file* to the correct format extractor.
+
+    Extension-level overrides are checked first so that non-OOXML
+    formats (.odt, .odp, .xls, .ods) route to the correct library
+    instead of being sent to openpyxl / python-docx / python-pptx.
 
     Parameters
     ----------
@@ -156,13 +159,13 @@ def extract(scanned_file: ScannedFile) -> ExtractionResult:
         Always returns a result object. On failure success=False and
         error_message is populated. This function never raises.
     """
-    path:     Path = scanned_file.absolute_path
-    category: str  = scanned_file.format_category
-    ext:      str  = scanned_file.extension
+    path:     Path = scanned_file.absolute_path      # type: ignore[attr-defined]
+    category: str  = scanned_file.format_category    # type: ignore[attr-defined]
+    ext:      str  = scanned_file.extension          # type: ignore[attr-defined]
 
     logger.debug(
-        "[EXTRACTOR] Starting  file=%s  category=%s",
-        path.name, category,
+        "[EXTRACTOR] Starting  file=%s  category=%s  ext=%s",
+        path.name, category, ext,
     )
 
     result = ExtractionResult(
@@ -175,7 +178,19 @@ def extract(scanned_file: ScannedFile) -> ExtractionResult:
 
     try:
         result.file_hash_md5 = _md5_of_file(path)
-        extractor_fn         = _DISPATCH.get(category)
+
+        # ── Extension-level overrides (non-OOXML formats) ─────────────
+        ext_lower = ext.lower()
+        if ext_lower == ".odt":
+            extractor_fn = _extract_odt
+        elif ext_lower == ".odp":
+            extractor_fn = _extract_odp
+        elif ext_lower == ".xls":
+            extractor_fn = _extract_xls
+        elif ext_lower == ".ods":
+            extractor_fn = _extract_ods
+        else:
+            extractor_fn = _DISPATCH.get(category)
 
         if extractor_fn is None:
             _fail(result, f"No extractor registered for category '{category}'")
@@ -207,11 +222,13 @@ def extract(scanned_file: ScannedFile) -> ExtractionResult:
     return result
 
 
-def extract_batch(scanned_files: list[ScannedFile]) -> list[ExtractionResult]:
+def extract_batch(scanned_files: list) -> list[ExtractionResult]:
     """
     Extract text from a list of ScannedFile objects.
 
     Failures on individual files do not stop the batch.
+    Progress is logged at DEBUG per-file and INFO every 100 files
+    to avoid flooding stdout on large directories.
 
     Parameters
     ----------
@@ -226,10 +243,12 @@ def extract_batch(scanned_files: list[ScannedFile]) -> list[ExtractionResult]:
     total = len(scanned_files)
 
     for idx, sf in enumerate(scanned_files, start=1):
-        logger.info(
+        if idx % 100 == 0 or idx == total:
+            logger.info("[EXTRACTOR] Batch progress: %d/%d", idx, total)
+        logger.debug(
             "[EXTRACTOR] Batch %d/%d  file=%s",
             idx, total,
-            sf.absolute_path.name,
+            sf.absolute_path.name,               # type: ignore[attr-defined]
         )
         results.append(extract(sf))
 
@@ -254,15 +273,25 @@ def _fail(result: ExtractionResult, message: str) -> None:
 
 
 def _add_chunk(
-    result:       ExtractionResult,
-    raw_text:     str,
-    source_label: str,
+    result:              ExtractionResult,
+    raw_text:            str,
+    source_label:        str,
+    preserve_formatting: bool = False,
 ) -> None:
     """
     Normalise raw_text, enforce MAX_CHARS_PER_DOC, append to result.
     Discards chunks shorter than MIN_CONTENT_LENGTH.
+
+    Parameters
+    ----------
+    preserve_formatting : bool
+        If True, leading whitespace (indentation) is preserved.
+        Use for source code files where indentation is meaningful.
     """
-    text = _normalise_text(raw_text)
+    if preserve_formatting:
+        text = _normalise_text_preserve_indent(raw_text)
+    else:
+        text = _normalise_text(raw_text)
 
     if len(text) > MAX_CHARS_PER_DOC:
         logger.warning(
@@ -324,6 +353,53 @@ def _normalise_text(text: str) -> str:
     return "\n".join(collapsed).strip()
 
 
+def _normalise_text_preserve_indent(text: str) -> str:
+    """
+    Normalise text while preserving leading whitespace (indentation).
+
+    Used for source code files where indentation is semantically
+    meaningful (e.g. Python blocks, C++ brace style).
+
+    Steps:
+      1. Unicode NFC normalisation.
+      2. Replace non-breaking spaces and zero-width characters.
+      3. Normalise all line endings to LF.
+      4. Strip *trailing* whitespace per line (keep leading).
+      5. Collapse 3+ consecutive blank lines to exactly 2.
+      6. Strip overall leading/trailing whitespace.
+    """
+    if not text:
+        return ""
+
+    text = unicodedata.normalize("NFC", text)
+    text = (
+        text
+        .replace("\u00a0", " ")
+        .replace("\u200b", "")
+        .replace("\u200c", "")
+        .replace("\u200d", "")
+        .replace("\ufeff", "")
+        .replace("\r\n",  "\n")
+        .replace("\r",    "\n")
+    )
+
+    # Strip trailing whitespace only — preserve leading indentation
+    lines = [line.rstrip() for line in text.split("\n")]
+
+    collapsed:   list[str] = []
+    blank_count: int        = 0
+    for line in lines:
+        if line == "":
+            blank_count += 1
+            if blank_count <= 2:
+                collapsed.append(line)
+        else:
+            blank_count = 0
+            collapsed.append(line)
+
+    return "\n".join(collapsed).strip()
+
+
 def _md5_of_file(path: Path, chunk_size: int = 65_536) -> str:
     """Compute MD5 hash of a file in streaming chunks (memory-safe)."""
     hasher = hashlib.md5()
@@ -335,7 +411,10 @@ def _md5_of_file(path: Path, chunk_size: int = 65_536) -> str:
                     break
                 hasher.update(block)
         return hasher.hexdigest()
-    except OSError:
+    except OSError as exc:
+        logger.debug(
+            "[EXTRACTOR] MD5 hash failed for %s: %s", path.name, exc,
+        )
         return ""
 
 
@@ -350,7 +429,7 @@ def _read_text_with_fallback(path: Path) -> str:
         except (UnicodeDecodeError, LookupError):
             continue
     logger.warning(
-        "[EXTRACTOR] Encoding fallback (utf-8 replace) for %s", path.name
+        "[EXTRACTOR] Encoding fallback (utf-8 replace) for %s", path.name,
     )
     return path.read_text(encoding="utf-8", errors="replace")
 
@@ -360,9 +439,7 @@ def _safe_get_email_content(part: object) -> str:
     Safely extract string content from an email message part.
 
     email.policy.default makes get_content() return str | bytes | list | dict
-    depending on MIME type. This helper always returns a plain str,
-    fixing the Pylance reportAttributeAccessIssue and reportArgumentType
-    errors caused by calling .strip() or passing to _add_chunk directly.
+    depending on MIME type. This helper always returns a plain str.
     """
     try:
         raw = part.get_content()                     # type: ignore[attr-defined]
@@ -370,17 +447,14 @@ def _safe_get_email_content(part: object) -> str:
             return raw
         if isinstance(raw, bytes):
             return raw.decode("utf-8", errors="replace")
-        # For any other type (list, dict — edge case in malformed MIME)
         return str(raw)
     except Exception:                                # pylint: disable=broad-except
         return ""
 
 
 # ---------------------------------------------------------------------------
-# Format extractors
+# Format extractors — Plain Text & Source Code
 # ---------------------------------------------------------------------------
-
-# ── Plain Text & Source Code ─────────────────────────────────────────────────
 
 def _extract_plain_text(path: Path, result: ExtractionResult) -> None:
     """
@@ -388,16 +462,25 @@ def _extract_plain_text(path: Path, result: ExtractionResult) -> None:
 
     Tries multiple encodings in order (ASM-3).
     Uses 'replace' error handler as final fallback.
+    Preserves indentation for source code files.
     """
     text = _read_text_with_fallback(path)
+    is_source = result.format_category == "source_code"
     logger.debug(
-        "[EXTRACTOR] PlainText  file=%s  chars=%d",
-        path.name, len(text),
+        "[EXTRACTOR] PlainText  file=%s  chars=%d  preserve_indent=%s",
+        path.name, len(text), is_source,
     )
-    _add_chunk(result, text, source_label=f"File: {path.name}")
+    _add_chunk(
+        result,
+        text,
+        source_label=f"File: {path.name}",
+        preserve_formatting=is_source,
+    )
 
 
-# ── PDF ──────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Format extractors — PDF
+# ---------------------------------------------------------------------------
 
 def _extract_pdf(path: Path, result: ExtractionResult) -> None:
     """
@@ -410,6 +493,7 @@ def _extract_pdf(path: Path, result: ExtractionResult) -> None:
       - Password-protected PDFs.
       - Scanned image PDFs with no text (OOS-5).
       - Corrupted per-page streams.
+      - PDFs that report is_encrypted=False but are actually encrypted.
     """
     try:
         import fitz                                  # type: ignore[import-untyped]
@@ -426,6 +510,17 @@ def _extract_pdf(path: Path, result: ExtractionResult) -> None:
     if doc.is_encrypted:
         doc.close()
         _fail(result, "PDF is password-protected — cannot extract text")
+        return
+
+    # Additional guard: some encrypted PDFs pass is_encrypted check
+    try:
+        _ = doc[0]
+    except Exception:
+        doc.close()
+        _fail(
+            result,
+            "PDF appears to be encrypted or corrupted — cannot access pages",
+        )
         return
 
     total_pages     = doc.page_count
@@ -465,22 +560,23 @@ def _extract_pdf(path: Path, result: ExtractionResult) -> None:
     )
 
 
-# ── Word Documents ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Format extractors — Word Documents
+# ---------------------------------------------------------------------------
 
 def _extract_docx(path: Path, result: ExtractionResult) -> None:
     """
-    Extract text from .docx / .odt files using python-docx.
+    Extract text from .docx files using python-docx.
 
     FR-1b Word rule:
       - Body paragraphs in document order.
       - Heading paragraphs prefixed with style name.
       - Table cells row-by-row, pipe-separated.
       - Section headers/footers appended.
-    """
-    if path.suffix.lower() == ".odt":
-        _fail(result, ".odt extraction not yet supported — convert to .docx first (OOS)")
-        return
 
+    Note: This extractor handles .docx (OOXML) only.
+    For .odt files, _extract_odt is used instead.
+    """
     try:
         from docx import Document                    # type: ignore[import-untyped]
     except ImportError:
@@ -541,11 +637,104 @@ def _extract_docx(path: Path, result: ExtractionResult) -> None:
     logger.debug("[EXTRACTOR] DOCX  file=%s  lines=%d", path.name, len(lines))
 
 
-# ── Presentations ─────────────────────────────────────────────────────────────
+def _extract_odt(path: Path, result: ExtractionResult) -> None:
+    """
+    Extract text from .odt files using odfpy.
+
+    FR-1b Word rule (ODT variant):
+      - All <text:p> paragraphs extracted in document order.
+      - All <text:h> headings extracted and prefixed with level.
+      - Tables extracted row-by-row, pipe-separated.
+      - List items extracted with bullet markers.
+
+    Note: python-docx does NOT support .odt. odfpy is required.
+    """
+    try:
+        from odf.opendocument import load as odf_load                     # type: ignore[import-untyped]
+        from odf.text import P as OdfP, H as OdfH, ListItem as OdfListItem  # type: ignore[import-untyped]
+        from odf.table import (                                           # type: ignore[import-untyped]
+            Table as OdfTable,
+            TableRow as OdfTableRow,
+            TableCell as OdfTableCell,
+        )
+    except ImportError:
+        _fail(result, "odfpy not installed — run: pip install odfpy")
+        return
+
+    try:
+        doc = odf_load(str(path))
+    except Exception as exc:
+        _fail(result, f"Cannot open ODT document: {exc}")
+        return
+
+    lines: list[str] = []
+
+    # ---- Headings -------------------------------------------------------
+    for heading in doc.getElementsByType(OdfH):
+        try:
+            outline_level = heading.getAttribute("outlinelevel")
+            level = int(str(outline_level)) if outline_level is not None else 1
+        except (ValueError, TypeError):
+            level = 1
+        text = _odf_element_text(heading).strip()
+        if text:
+            lines.append(f"[Heading {level}] {text}")
+
+    # ---- Paragraphs -----------------------------------------------------
+    for para in doc.getElementsByType(OdfP):
+        text = _odf_element_text(para).strip()
+        if text:
+            lines.append(text)
+
+    # ---- List items -----------------------------------------------------
+    for item in doc.getElementsByType(OdfListItem):
+        text = _odf_element_text(item).strip()
+        if text:
+            lines.append(f"• {text}")
+
+    # ---- Tables ---------------------------------------------------------
+    table_idx = 0
+    for table in doc.getElementsByType(OdfTable):
+        table_idx += 1
+        lines.append(f"[Table {table_idx}]")
+        for row in table.getElementsByType(OdfTableRow):
+            cells = []
+            for cell in row.getElementsByType(OdfTableCell):
+                cell_text = _odf_element_text(cell).strip()
+                if cell_text:
+                    cells.append(cell_text)
+            if cells:
+                lines.append(" | ".join(cells))
+
+    if not lines:
+        _fail(result, "ODT document contains no extractable text")
+        return
+
+    _add_chunk(result, "\n".join(lines), source_label=f"Document: {path.name}")
+    logger.debug("[EXTRACTOR] ODT  file=%s  lines=%d", path.name, len(lines))
+
+
+def _odf_element_text(element: object) -> str:
+    """Recursively extract all text content from an ODF element."""
+    parts: list[str] = []
+    try:
+        for child in element.childNodes:             # type: ignore[attr-defined]
+            if hasattr(child, "data"):
+                parts.append(str(child.data))        # type: ignore[attr-defined]
+            elif hasattr(child, "childNodes"):
+                parts.append(_odf_element_text(child))
+    except Exception:
+        pass
+    return "".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Format extractors — Presentations
+# ---------------------------------------------------------------------------
 
 def _extract_pptx(path: Path, result: ExtractionResult) -> None:
     """
-    Extract text from .pptx / .odp files using python-pptx.
+    Extract text from .pptx files using python-pptx.
 
     FR-1b Presentation rule:
       - Each slide → one ExtractedChunk labelled "Slide N".
@@ -553,11 +742,10 @@ def _extract_pptx(path: Path, result: ExtractionResult) -> None:
       - All shapes extracted recursively (text frames, tables, groups).
       - Speaker notes appended under [Notes].
       - Empty slides skipped.
-    """
-    if path.suffix.lower() == ".odp":
-        _fail(result, ".odp extraction not yet supported — convert to .pptx first (OOS)")
-        return
 
+    Note: This extractor handles .pptx (OOXML) only.
+    For .odp files, _extract_odp is used instead.
+    """
     try:
         from pptx import Presentation               # type: ignore[import-untyped]
     except ImportError:
@@ -660,11 +848,110 @@ def _extract_pptx_shape_recursive(
         pass
 
 
-# ── Spreadsheets ──────────────────────────────────────────────────────────────
+def _extract_odp(path: Path, result: ExtractionResult) -> None:
+    """
+    Extract text from .odp presentation files using odfpy.
+
+    FR-1b Presentation rule (ODP variant):
+      - Each <draw:page> treated as a logical slide unit.
+      - Text extracted from all <text:p> elements within each frame.
+      - Frames prefixed with slide number for traceability.
+      - Speaker notes extracted if present.
+      - Fallback: if no draw:page structure, extract all paragraphs.
+
+    Note: python-pptx does NOT support .odp. odfpy is required.
+    """
+    try:
+        from odf.opendocument import load as odf_load                     # type: ignore[import-untyped]
+        from odf.text import P as OdfP                                    # type: ignore[import-untyped]
+        from odf.draw import (                                            # type: ignore[import-untyped]
+            Page as OdfPage,
+            Frame as OdfFrame,
+            Notes as OdfNotes,
+        )
+    except ImportError:
+        _fail(result, "odfpy not installed — run: pip install odfpy")
+        return
+
+    try:
+        doc = odf_load(str(path))
+    except Exception as exc:
+        _fail(result, f"Cannot open ODP presentation: {exc}")
+        return
+
+    # Try to extract by draw:page (slides)
+    slides = doc.getElementsByType(OdfPage)
+
+    if slides:
+        extracted_slides = 0
+        for slide_num, page in enumerate(slides, start=1):
+            slide_lines: list[str] = []
+
+            # Extract text from all frames within this page
+            frames = page.getElementsByType(OdfFrame)
+            for frame in frames:
+                frame_text = _odf_element_text(frame).strip()
+                if frame_text:
+                    slide_lines.append(frame_text)
+
+            # Extract notes if present
+            try:
+                notes_elements = page.getElementsByType(OdfNotes)
+                for notes_elem in notes_elements:
+                    notes_text = _odf_element_text(notes_elem).strip()
+                    if notes_text:
+                        slide_lines.append(f"[Notes] {notes_text}")
+            except Exception:
+                pass
+
+            if not slide_lines:
+                continue
+
+            _add_chunk(
+                result,
+                "\n".join(slide_lines),
+                source_label=f"Slide {slide_num}",
+            )
+            extracted_slides += 1
+
+        if extracted_slides > 0:
+            logger.debug(
+                "[EXTRACTOR] ODP  file=%s  slides=%d extracted",
+                path.name, extracted_slides,
+            )
+            return
+
+    # Fallback: extract all paragraphs if no draw:page structure found
+    paragraphs = doc.getElementsByType(OdfP)
+    lines: list[str] = []
+    for para in paragraphs:
+        text = _odf_element_text(para).strip()
+        if text:
+            lines.append(text)
+
+    if not lines:
+        _fail(result, "ODP presentation contains no extractable text")
+        return
+
+    _add_chunk(
+        result,
+        "\n".join(lines),
+        source_label=f"ODP: {path.name}",
+    )
+    logger.debug(
+        "[EXTRACTOR] ODP (fallback)  file=%s  lines=%d",
+        path.name, len(lines),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Format extractors — Spreadsheets
+# ---------------------------------------------------------------------------
 
 def _extract_spreadsheet(path: Path, result: ExtractionResult) -> None:
     """Dispatch spreadsheet extraction by extension."""
-    if path.suffix.lower() == ".csv":
+    ext = path.suffix.lower()
+    if ext == ".csv":
         _extract_csv(path, result)
     else:
         _extract_xlsx(path, result)
@@ -672,15 +959,21 @@ def _extract_spreadsheet(path: Path, result: ExtractionResult) -> None:
 
 def _extract_xlsx(path: Path, result: ExtractionResult) -> None:
     """
-    Extract text from .xlsx / .xls / .ods using openpyxl.
+    Extract text from .xlsx files using openpyxl.
 
     FR-1b Spreadsheet rule:
       - Each sheet → one ExtractedChunk labelled "Sheet: <name>".
-      - First non-empty row becomes column headers (keys).
+      - Headers detected via heuristic: scan first HEADER_SCAN_ROWS
+        rows and pick the row with the most non-empty cells.
       - Each data row linearized: "Key: Value | Key: Value | ..."
       - Empty rows skipped.
       - Formulas read as computed values (data_only=True).
       - CON-3: Sheets with >500 columns warned but still processed.
+      - Merged cells logged at DEBUG.
+
+    Note: openpyxl does NOT support .xls (legacy binary).
+    For .xls files, _extract_xls is used instead.
+    For .ods files, _extract_ods is used instead.
     """
     try:
         import openpyxl                              # type: ignore[import-untyped]
@@ -701,53 +994,216 @@ def _extract_xlsx(path: Path, result: ExtractionResult) -> None:
 
     extracted_sheets = 0
 
-    for sheet_name in wb.sheetnames:
-        try:
-            ws   = wb[sheet_name]
-            rows = list(ws.iter_rows(values_only=True))
-        except Exception as exc:                     # pylint: disable=broad-except
-            logger.warning(
-                "[EXTRACTOR] Sheet '%s' failed  file=%s  reason=%s",
-                sheet_name, path.name, exc,
+    try:
+        for sheet_name in wb.sheetnames:
+            try:
+                ws   = wb[sheet_name]
+                rows = list(ws.iter_rows(values_only=True))
+            except Exception as exc:                 # pylint: disable=broad-except
+                logger.warning(
+                    "[EXTRACTOR] Sheet '%s' failed  file=%s  reason=%s",
+                    sheet_name, path.name, exc,
+                )
+                continue
+
+            if not rows:
+                continue
+
+            # ── Header detection heuristic ──────────────────────────────
+            # Scan first HEADER_SCAN_ROWS rows; pick the one with the
+            # most non-empty cells as the header row.
+            best_header_row: Optional[int] = None
+            best_header_count: int         = 0
+
+            for row_idx in range(min(HEADER_SCAN_ROWS, len(rows))):
+                row = rows[row_idx]
+                non_empty = sum(
+                    1 for c in row
+                    if c is not None and str(c).strip()
+                )
+                if non_empty > best_header_count:
+                    best_header_count = non_empty
+                    best_header_row   = row_idx
+
+            if best_header_row is None or best_header_count == 0:
+                continue
+
+            headers: list[str] = []
+            for i, c in enumerate(rows[best_header_row]):
+                val = str(c).strip() if c is not None else ""
+                headers.append(val if val else f"Col{i + 1}")
+
+            data_start_idx: int = best_header_row + 1
+
+            if len(headers) > 500:
+                logger.warning(
+                    "[EXTRACTOR] Sheet '%s' has %d columns (CON-3)  file=%s",
+                    sheet_name, len(headers), path.name,
+                )
+
+            linearized_rows: list[str] = []
+
+            for row in rows[data_start_idx:]:
+                # Log merged-cell detection
+                if any(c is None for c in row):
+                    non_none = sum(1 for c in row if c is not None)
+                    logger.debug(
+                        "[EXTRACTOR] Sheet '%s' row has %d/%d None cells "
+                        "(merged?)  file=%s",
+                        sheet_name, non_none, len(headers), path.name,
+                    )
+
+                pairs: list[str] = []
+                for header, cell_val in zip(headers, row):
+                    if cell_val is None:
+                        continue
+                    val = str(cell_val).strip()
+                    if val:
+                        pairs.append(f"{header}: {val}")
+                if pairs:
+                    linearized_rows.append(" | ".join(pairs))
+
+            if not linearized_rows:
+                continue
+
+            _add_chunk(
+                result,
+                "\n".join(linearized_rows),
+                source_label=f"Sheet: {sheet_name}",
             )
+            extracted_sheets += 1
+
+    finally:
+        wb.close()
+
+    if extracted_sheets == 0:
+        _fail(result, "Spreadsheet contains no extractable data")
+        return
+
+    logger.debug(
+        "[EXTRACTOR] XLSX  file=%s  sheets=%d extracted",
+        path.name, extracted_sheets,
+    )
+
+
+def _extract_xls(path: Path, result: ExtractionResult) -> None:
+    """
+    Extract text from legacy .xls files using xlrd.
+
+    FR-1b Spreadsheet rule (XLS variant):
+      - Each sheet → one ExtractedChunk labelled "Sheet: <name>".
+      - First row treated as headers.
+      - Each data row linearized as "Key: Value | Key: Value".
+      - Empty sheets skipped.
+
+    Note: openpyxl does NOT support .xls (binary Excel 97-2003).
+    xlrd is required.
+    """
+    try:
+        import xlrd                                  # type: ignore[import-untyped]
+    except ImportError:
+        _fail(result, "xlrd not installed — run: pip install xlrd")
+        return
+
+    try:
+        wb = xlrd.open_workbook(str(path))
+    except Exception as exc:                         # pylint: disable=broad-except
+        _fail(result, f"Cannot open XLS file: {exc}")
+        return
+
+    extracted_sheets = 0
+
+    for sheet in wb.sheets():
+        if sheet.nrows == 0:
             continue
 
-        if not rows:
+        headers: list[str] = []
+        for col in range(sheet.ncols):
+            val = str(sheet.cell_value(0, col)).strip()
+            headers.append(val if val else f"Col{col + 1}")
+
+        if not any(headers):
             continue
-
-        headers:        list[str] = []
-        data_start_idx: int       = 0
-
-        for row_idx, row in enumerate(rows):
-            non_empty = [c for c in row if c is not None and str(c).strip()]
-            if non_empty:
-                headers = [
-                    str(c).strip() if (c is not None and str(c).strip())
-                    else f"Col{i + 1}"
-                    for i, c in enumerate(row)
-                ]
-                data_start_idx = row_idx + 1
-                break
-
-        if not headers:
-            continue
-
-        if len(headers) > 500:
-            logger.warning(
-                "[EXTRACTOR] Sheet '%s' has %d columns (CON-3)  file=%s",
-                sheet_name, len(headers), path.name,
-            )
 
         linearized_rows: list[str] = []
 
-        for row in rows[data_start_idx:]:
+        for row_idx in range(1, sheet.nrows):
             pairs: list[str] = []
-            for header, cell_val in zip(headers, row):
-                if cell_val is None:
-                    continue
-                val = str(cell_val).strip()
+            for col_idx, header in enumerate(headers):
+                val = str(sheet.cell_value(row_idx, col_idx)).strip()
                 if val:
                     pairs.append(f"{header}: {val}")
+            if pairs:
+                linearized_rows.append(" | ".join(pairs))
+
+        if not linearized_rows:
+            continue
+
+        _add_chunk(
+            result,
+            "\n".join(linearized_rows),
+            source_label=f"Sheet: {sheet.name}",
+        )
+        extracted_sheets += 1
+
+    if extracted_sheets == 0:
+        _fail(result, "XLS file contains no extractable data")
+        return
+
+    logger.debug(
+        "[EXTRACTOR] XLS  file=%s  sheets=%d extracted",
+        path.name, extracted_sheets,
+    )
+
+
+def _extract_ods(path: Path, result: ExtractionResult) -> None:
+    """
+    Extract text from .ods files using pandas + odfpy engine.
+
+    FR-1b Spreadsheet rule (ODS variant):
+      - Each sheet → one ExtractedChunk labelled "Sheet: <name>".
+      - Column headers used as keys.
+      - Each row linearized as "Key: Value | Key: Value".
+      - NaN values skipped.
+      - Empty sheets skipped.
+
+    Note: openpyxl does NOT support .ods.
+    pandas with the 'odf' engine (requires odfpy) is used.
+    """
+    try:
+        import pandas as pd                          # type: ignore[import-untyped]
+    except ImportError:
+        _fail(result, "pandas not installed — run: pip install pandas")
+        return
+
+    try:
+        sheets = pd.read_excel(str(path), engine="odf", sheet_name=None)
+    except ImportError:
+        _fail(result, "odfpy not installed — run: pip install odfpy")
+        return
+    except Exception as exc:                         # pylint: disable=broad-except
+        _fail(result, f"Cannot open ODS file: {exc}")
+        return
+
+    extracted_sheets = 0
+
+    for sheet_name, df in sheets.items():
+        if df.empty:
+            continue
+
+        headers: list[str] = [
+            str(c).strip() or f"Col{i + 1}"
+            for i, c in enumerate(df.columns)
+        ]
+
+        linearized_rows: list[str] = []
+
+        for _, row in df.iterrows():
+            pairs: list[str] = []
+            for header, val in zip(headers, row):
+                s = str(val).strip()
+                if s and s.lower() != "nan":
+                    pairs.append(f"{header}: {s}")
             if pairs:
                 linearized_rows.append(" | ".join(pairs))
 
@@ -761,14 +1217,12 @@ def _extract_xlsx(path: Path, result: ExtractionResult) -> None:
         )
         extracted_sheets += 1
 
-    wb.close()
-
     if extracted_sheets == 0:
-        _fail(result, "Spreadsheet contains no extractable data")
+        _fail(result, "ODS file contains no extractable data")
         return
 
     logger.debug(
-        "[EXTRACTOR] XLSX  file=%s  sheets=%d extracted",
+        "[EXTRACTOR] ODS  file=%s  sheets=%d extracted",
         path.name, extracted_sheets,
     )
 
@@ -781,11 +1235,20 @@ def _extract_csv(path: Path, result: ExtractionResult) -> None:
       - First row treated as headers.
       - Each row linearized as "Key: Value | Key: Value".
       - Auto-detects delimiter (comma, semicolon, tab, pipe).
+      - Verifies detected delimiter produces consistent column counts.
     """
     raw_text = _read_text_with_fallback(path)
 
     try:
         dialect = csv.Sniffer().sniff(raw_text[:4096], delimiters=",;\t|")
+        # Verify: detected delimiter should produce consistent column counts
+        test_reader = csv.reader(io.StringIO(raw_text[:4096]), dialect)
+        test_rows   = list(test_reader)
+        col_counts  = set(len(r) for r in test_rows[:5])
+        if len(col_counts) > 1 or (
+            len(test_rows) > 0 and max(col_counts) <= 1
+        ):
+            raise csv.Error("Inconsistent column count — fallback to comma")
     except csv.Error:
         dialect = csv.excel
 
@@ -827,7 +1290,9 @@ def _extract_csv(path: Path, result: ExtractionResult) -> None:
     )
 
 
-# ── Email ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Format extractors — Email
+# ---------------------------------------------------------------------------
 
 def _extract_eml(path: Path, result: ExtractionResult) -> None:
     """
@@ -838,10 +1303,6 @@ def _extract_eml(path: Path, result: ExtractionResult) -> None:
       - text/plain preferred over text/html for body.
       - Attachments listed by name only (not processed — OOS-5).
       - MIME encoding (base64, quoted-printable) handled automatically.
-
-    FIX: Uses _safe_get_email_content() to avoid Pylance type errors
-    caused by email.policy.default making get_content() return
-    str | bytes | list | dict.
     """
     try:
         raw_bytes = path.read_bytes()
@@ -881,7 +1342,6 @@ def _extract_eml(path: Path, result: ExtractionResult) -> None:
                 continue
 
             if content_type == "text/plain" and not body_text:
-                # FIX: _safe_get_email_content always returns str
                 body_text = _safe_get_email_content(part).strip()
 
             elif content_type == "text/html" and not body_text:
@@ -890,8 +1350,8 @@ def _extract_eml(path: Path, result: ExtractionResult) -> None:
     else:
         body_text = _safe_get_email_content(msg).strip()
 
-    if body_text:
-        lines.append(body_text)
+    if body_text.strip():
+        lines.append(body_text.strip())
 
     if attachments:
         lines.append(f"[Attachments] {', '.join(attachments)}")
@@ -911,7 +1371,9 @@ def _extract_eml(path: Path, result: ExtractionResult) -> None:
     )
 
 
-# ── HTML / Web ────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Format extractors — HTML / Web
+# ---------------------------------------------------------------------------
 
 def _extract_html(path: Path, result: ExtractionResult) -> None:
     """
@@ -925,7 +1387,10 @@ def _extract_html(path: Path, result: ExtractionResult) -> None:
     try:
         from bs4 import BeautifulSoup                # type: ignore[import-untyped]
     except ImportError:
-        _fail(result, "beautifulsoup4 not installed — run: pip install beautifulsoup4")
+        _fail(
+            result,
+            "beautifulsoup4 not installed — run: pip install beautifulsoup4",
+        )
         return
 
     raw_text = _read_text_with_fallback(path)
@@ -936,9 +1401,11 @@ def _extract_html(path: Path, result: ExtractionResult) -> None:
         _fail(result, f"HTML parse error: {exc}")
         return
 
-    for tag in soup(["script", "style", "head", "nav",
-                     "footer", "aside", "noscript", "meta",
-                     "link", "button", "form", "input"]):
+    for tag in soup([
+        "script", "style", "head", "nav",
+        "footer", "aside", "noscript", "meta",
+        "link", "button", "form", "input",
+    ]):
         tag.decompose()
 
     raw_extracted = soup.get_text(separator="\n")

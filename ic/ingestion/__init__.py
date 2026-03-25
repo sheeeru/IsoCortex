@@ -8,9 +8,6 @@ imported as 'ingestion.scanner' from the project root, or as a
 standalone package — without any sys.path manipulation.
 """
 
-__version__ = "0.1.0"
-__author__  = "Shaheer Qureshi"
-
 from .scanner import (
     ScannedFile,
     ScanResult,
@@ -30,8 +27,6 @@ from .extractor import (
 )
 
 __all__ = [
-    "__version__",
-    "__author__",
     # scanner
     "ScannedFile",
     "ScanResult",

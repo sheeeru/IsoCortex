@@ -25,10 +25,20 @@ from __future__ import annotations
 import logging
 import os
 import stat
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Generator, Optional, Tuple
+from typing import Generator, Optional, Protocol, Tuple
+
+# ---------------------------------------------------------------------------
+# Protocol for summary objects (ScanSummary and _NullSummary)
+# ---------------------------------------------------------------------------
+class _SummaryProtocol(Protocol):
+    """Interface that both ScanSummary and _NullSummary satisfy."""
+    def record_skip(self, path: Path, reason: str) -> None: ...
+    def record_expected_skip(self, path: Path, reason: str) -> None: ...
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -97,12 +107,15 @@ DEFAULT_IGNORE_DIRS: frozenset[str] = frozenset({
     ".vscode",
 })
 
+# Maximum filesystem depth to prevent RecursionError on pathological trees.
+MAX_RECURSION_DEPTH: int = 200
+
 
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class ScannedFile:
     """
     Immutable record describing a single file accepted by the scanner.
@@ -132,13 +145,12 @@ class ScanSummary:
 
     Attributes
     ----------
-    root_directory  : Path             — The directory that was scanned.
-    total_visited   : int              — Number of *files* visited (not
-                                         directories — dirs are never counted).
-    total_accepted  : int              — Files with a supported extension.
-    total_skipped   : int              — Files/dirs skipped for any reason.
-    skipped_details : list             — Per-skip reason records.
-    elapsed_seconds : float            — Wall-clock time for the scan.
+    root_directory  : Path                  — The directory that was scanned.
+    total_visited   : int                   — Every filesystem node visited.
+    total_accepted  : int                   — Files with a supported extension.
+    total_skipped   : int                   — Files/dirs skipped for any reason.
+    skipped_details : list[dict[str, str]]  — Per-skip reason records.
+    elapsed_seconds : float                 — Wall-clock time for the scan.
     """
     root_directory:  Path
     total_visited:   int                    = 0
@@ -148,11 +160,26 @@ class ScanSummary:
     elapsed_seconds: float                  = 0.0
 
     def record_skip(self, path: Path, reason: str) -> None:
-        """Increment skip counter and store the human-readable reason."""
+        """
+        Increment skip counter and store the human-readable reason.
+        Logged at WARNING — use for genuinely unexpected skips.
+        """
         self.total_skipped += 1
         self.skipped_details.append({"path": str(path), "reason": reason})
         logger.warning(
-            "[SCANNER] Skipped %-60s  reason=%s", path, reason
+            "[SCANNER] Skipped %-60s  reason=%s", path, reason,
+        )
+
+    def record_expected_skip(self, path: Path, reason: str) -> None:
+        """
+        Increment skip counter for expected/normal filtering.
+        Logged at DEBUG to avoid flooding output on large trees.
+        Examples: unsupported extension, hidden directory, ignored dir.
+        """
+        self.total_skipped += 1
+        self.skipped_details.append({"path": str(path), "reason": reason})
+        logger.debug(
+            "[SCANNER] Skipped (expected) %-60s  reason=%s", path, reason,
         )
 
 
@@ -177,7 +204,7 @@ class ScanResult:
 def _check_file(
     path: Path,
     max_file_size_bytes: int,
-) -> tuple[bool, str, int, float]:
+) -> Tuple[bool, str, int, float]:
     """
     Single stat call that checks readability, size, and returns metadata.
 
@@ -199,9 +226,6 @@ def _check_file(
 
     if not stat.S_ISREG(st.st_mode):
         return False, "not_regular_file", 0, 0.0
-
-    if st.st_size == 0:
-        return False, "empty_file", 0, 0.0
 
     if not os.access(path, os.R_OK):
         return False, "not_readable", 0, 0.0
@@ -234,7 +258,9 @@ def scan_directory(
     *,
     extra_ignore_dirs: Optional[set[str]] = None,
     max_file_size_mb: float = 500.0,
+    max_files: int = 0,
     follow_symlinks: bool = False,
+    include_hidden: bool = False,
 ) -> ScanResult:
     """
     Recursively scan *root* and return all files with supported extensions.
@@ -252,9 +278,19 @@ def scan_directory(
         Files larger than this threshold (MB) are skipped.
         Default: 500 MB. Set to ``float("inf")`` to disable.
 
+    max_files : int
+        Stop scanning after accepting this many files.
+        0 means unlimited. Useful as a safety cap.
+
     follow_symlinks : bool
-        If True, symbolic links to directories are followed.
+        If True, symbolic links to directories are followed and
+        symbolic links to files are accepted.
         Circular links are always detected and skipped regardless.
+
+    include_hidden : bool
+        If True, directories starting with '.' are no longer
+        auto-skipped. Only DEFAULT_IGNORE_DIRS and extra_ignore_dirs
+        apply. Default: False.
 
     Returns
     -------
@@ -309,8 +345,9 @@ def scan_directory(
 
     logger.info(
         "[SCANNER] Starting scan  root=%s  max_size=%.1f MB  "
-        "follow_symlinks=%s  ignore_dirs=%d",
-        root_path, max_file_size_mb, follow_symlinks, len(ignore_dirs),
+        "follow_symlinks=%s  include_hidden=%s  ignore_dirs=%d  max_files=%d",
+        root_path, max_file_size_mb, follow_symlinks,
+        include_hidden, len(ignore_dirs), max_files,
     )
 
     # ------------------------------------------------------------------
@@ -324,9 +361,10 @@ def scan_directory(
     # ------------------------------------------------------------------
     # Walk
     # ------------------------------------------------------------------
-    for entry in _walk(root_path, ignore_dirs, follow_symlinks, summary):
-
-        # Count only files — _walk() yields file paths only, not directories
+    for entry in _walk(
+        root_path, ignore_dirs, follow_symlinks,
+        include_hidden, summary, depth=0,
+    ):
         summary.total_visited += 1
 
         # ---- Circular / duplicate symlink guard ----------------------
@@ -335,22 +373,23 @@ def scan_directory(
             summary.record_skip(entry, "unresolvable_symlink")
             continue
         if resolved in seen_real:
-            summary.record_skip(entry, "circular_symlink_or_duplicate")
+            summary.record_expected_skip(
+                entry, "circular_symlink_or_duplicate",
+            )
             continue
         seen_real.add(resolved)
 
         # ---- Extension filter ----------------------------------------
         ext = entry.suffix.lower()
         if ext not in SUPPORTED_EXTENSIONS:
-            summary.record_skip(
-                entry,
-                f"unsupported_extension:{ext or 'none'}",
+            summary.record_expected_skip(
+                entry, f"unsupported_extension:{ext or 'none'}",
             )
             continue
 
         # ---- Single stat call for all file checks --------------------
         ok, reason, size_bytes, modified_ts = _check_file(
-            entry, max_file_size_bytes
+            entry, max_file_size_bytes,
         )
         if not ok:
             summary.record_skip(entry, reason)
@@ -375,6 +414,14 @@ def scan_directory(
             scanned.size_bytes,
         )
 
+        # ---- Max files cap -------------------------------------------
+        if max_files > 0 and summary.total_accepted >= max_files:
+            logger.info(
+                "[SCANNER] Reached max_files=%d — stopping scan",
+                max_files,
+            )
+            break
+
     # ------------------------------------------------------------------
     # Finalise summary
     # ------------------------------------------------------------------
@@ -397,28 +444,151 @@ def iter_scan_directory(
     *,
     extra_ignore_dirs: Optional[set[str]] = None,
     max_file_size_mb: float = 500.0,
+    max_files: int = 0,
     follow_symlinks: bool = False,
+    include_hidden: bool = False,
 ) -> Generator[ScannedFile, None, None]:
     """
-    Memory-efficient generator variant of :func:`scan_directory`.
+    Memory-efficient generator variant of directory scanning.
 
-    Yields ScannedFile objects one at a time — suitable for very large
-    directory trees where holding all results in memory is undesirable.
+    Yields ScannedFile objects one at a time as they are discovered
+    during traversal — suitable for very large directory trees where
+    holding all results in memory is undesirable.
 
-    Parameters and semantics are identical to :func:`scan_directory`.
+    Unlike scan_directory(), this does NOT build a complete list first.
+    Each file is yielded immediately after acceptance.
+
+    Parameters
+    ----------
+    root : str | Path
+        The root directory to scan.
+
+    extra_ignore_dirs : set[str] | None
+        Additional directory names to ignore.
+
+    max_file_size_mb : float
+        Skip files larger than this (MB). Default 500.
+
+    max_files : int
+        Stop after yielding this many files. 0 = unlimited.
+
+    follow_symlinks : bool
+        Follow symlinks to directories. Default False.
+
+    include_hidden : bool
+        Scan dot-prefixed directories. Default False.
+
+    Yields
+    ------
+    ScannedFile
+        One per accepted file, in traversal order.
 
     Examples
     --------
     >>> for scanned_file in iter_scan_directory("./corpus"):
     ...     process(scanned_file)
     """
-    result = scan_directory(
-        root,
-        extra_ignore_dirs = extra_ignore_dirs,
-        max_file_size_mb  = max_file_size_mb,
-        follow_symlinks   = follow_symlinks,
+    root_path = Path(root).expanduser()
+
+    # Pre-flight validation (same as scan_directory)
+    if not root_path.exists():
+        raise FileNotFoundError(
+            f"[IsoCortex] Root directory does not exist: '{root_path}'"
+        )
+    if not root_path.is_dir():
+        raise NotADirectoryError(
+            f"[IsoCortex] Path is not a directory: '{root_path}'"
+        )
+    if not os.access(root_path, os.R_OK):
+        raise PermissionError(
+            f"[IsoCortex] Cannot read root directory: '{root_path}'"
+        )
+
+    root_path = root_path.resolve()
+
+    # Build ignore set
+    ignore_dirs: frozenset[str] = DEFAULT_IGNORE_DIRS
+    if extra_ignore_dirs:
+        ignore_dirs = ignore_dirs | frozenset(extra_ignore_dirs)
+
+    max_file_size_bytes = int(max_file_size_mb * 1024 * 1024)
+
+    logger.info(
+        "[SCANNER] Starting iter scan  root=%s  max_size=%.1f MB  "
+        "follow_symlinks=%s  include_hidden=%s",
+        root_path, max_file_size_mb, follow_symlinks, include_hidden,
     )
-    yield from result.files
+
+    # Lightweight summary for logging only (not returned)
+    seen_real: set[Path] = set()
+    accepted_count: int  = 0
+    t_start              = time.perf_counter()
+
+    for entry in _walk(
+        root_path, ignore_dirs, follow_symlinks,
+        include_hidden, _NullSummary(), depth=0,
+    ):
+        # Circular / duplicate symlink guard
+        resolved = _resolve_safe(entry)
+        if resolved is None:
+            logger.debug("[SCANNER] Iter skip  %s  unresolvable", entry.name)
+            continue
+        if resolved in seen_real:
+            logger.debug("[SCANNER] Iter skip  %s  duplicate", entry.name)
+            continue
+        seen_real.add(resolved)
+
+        # Extension filter
+        ext = entry.suffix.lower()
+        if ext not in SUPPORTED_EXTENSIONS:
+            continue
+
+        # File checks
+        ok, reason, size_bytes, modified_ts = _check_file(
+            entry, max_file_size_bytes,
+        )
+        if not ok:
+            logger.debug("[SCANNER] Iter skip  %s  %s", entry.name, reason)
+            continue
+
+        scanned = ScannedFile(
+            absolute_path   = resolved,
+            relative_path   = entry.relative_to(root_path),
+            extension       = ext,
+            format_category = SUPPORTED_EXTENSIONS[ext],
+            size_bytes      = size_bytes,
+            modified_ts     = modified_ts,
+        )
+        accepted_count += 1
+        yield scanned
+
+        if max_files > 0 and accepted_count >= max_files:
+            logger.info(
+                "[SCANNER] Iter reached max_files=%d — stopping",
+                max_files,
+            )
+            break
+
+    elapsed = time.perf_counter() - t_start
+    logger.info(
+        "[SCANNER] Iter scan complete  yielded=%d  elapsed=%.3fs",
+        accepted_count, elapsed,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Null summary for iter_scan_directory (avoids storing skip details)
+# ---------------------------------------------------------------------------
+
+class _NullSummary:
+    """Drop-in replacement for ScanSummary that discards skip records."""
+
+    def record_skip(self, path: Path, reason: str) -> None:
+        logger.debug("[SCANNER] Skip  %s  %s", path, reason)
+
+    def record_expected_skip(self, path: Path, reason: str) -> None:
+        logger.debug("[SCANNER] Skip (expected)  %s  %s", path, reason)
+
 
 
 # ---------------------------------------------------------------------------
@@ -429,7 +599,9 @@ def _walk(
     root:            Path,
     ignore_dirs:     frozenset[str],
     follow_symlinks: bool,
-    summary:         ScanSummary,
+    include_hidden:  bool,
+    summary:         _SummaryProtocol,
+    depth:           int,
 ) -> Generator[Path, None, None]:
     """
     Yield every filesystem file entry under *root*, pruning ignored dirs.
@@ -438,7 +610,16 @@ def _walk(
     vs. multiple calls in pathlib.rglob.
 
     Skipped directories are recorded in *summary* but never raise.
+
+    Parameters
+    ----------
+    depth : int
+        Current recursion depth. Stops at MAX_RECURSION_DEPTH.
     """
+    if depth > MAX_RECURSION_DEPTH:
+        summary.record_skip(root, f"max_depth_exceeded:{depth}")
+        return
+
     try:
         entries = list(os.scandir(root))
     except PermissionError:
@@ -451,9 +632,59 @@ def _walk(
     for entry in entries:
         entry_path = Path(entry.path)
 
+        # ---- Symlink handling (checked FIRST) ------------------------
         try:
-            is_dir  = entry.is_dir(follow_symlinks=follow_symlinks)
-            is_file = entry.is_file(follow_symlinks=follow_symlinks)
+            is_symlink = entry.is_symlink()
+        except OSError:
+            summary.record_skip(entry_path, "stat_error")
+            continue
+
+        if is_symlink:
+            if not follow_symlinks:
+                summary.record_expected_skip(
+                    entry_path, "symlink_not_followed",
+                )
+                continue
+
+            # follow_symlinks=True: resolve target type
+            try:
+                target_is_dir = entry.is_dir(follow_symlinks=True)
+            except OSError:
+                summary.record_skip(
+                    entry_path, "broken_symlink",
+                )
+                continue
+
+            if target_is_dir:
+                dir_name = entry.name
+
+                if not include_hidden and dir_name.startswith("."):
+                    summary.record_expected_skip(
+                        entry_path, "hidden_directory",
+                    )
+                    continue
+
+                if dir_name in ignore_dirs:
+                    summary.record_expected_skip(
+                        entry_path, f"ignored_dir:{dir_name}",
+                    )
+                    continue
+
+                yield from _walk(
+                    entry_path, ignore_dirs, follow_symlinks,
+                    include_hidden, summary, depth + 1,
+                )
+                continue
+
+            # Symlink target is a file — yield it, extension check
+            # happens in the caller
+            yield entry_path
+            continue
+
+        # ---- Non-symlink handling ------------------------------------
+        try:
+            is_dir  = entry.is_dir()
+            is_file = entry.is_file()
         except OSError:
             summary.record_skip(entry_path, "stat_error")
             continue
@@ -461,23 +692,32 @@ def _walk(
         if is_dir:
             dir_name = entry.name
 
+            if not include_hidden and dir_name.startswith("."):
+                summary.record_expected_skip(
+                    entry_path, "hidden_directory",
+                )
+                continue
+
             if dir_name in ignore_dirs:
-                summary.record_skip(
-                    entry_path, f"ignored_dir:{dir_name}"
+                summary.record_expected_skip(
+                    entry_path, f"ignored_dir:{dir_name}",
                 )
                 continue
 
             # Recurse
             yield from _walk(
-                entry_path, ignore_dirs, follow_symlinks, summary
+                entry_path, ignore_dirs, follow_symlinks,
+                include_hidden, summary, depth + 1,
             )
 
         elif is_file:
             yield entry_path
 
         else:
-            # Broken symlink or special file (socket, device, FIFO)
-            summary.record_skip(entry_path, "not_file_or_dir")
+            # Special file: socket, device, FIFO, or unexpected type
+            summary.record_expected_skip(
+                entry_path, "special_file",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -525,8 +765,7 @@ def _configure_logging(verbose: bool = False) -> None:
 
 if __name__ == "__main__":
     import argparse
-    import json
-    import sys
+    import json as json_mod
 
     parser = argparse.ArgumentParser(
         prog        = "scanner",
@@ -544,9 +783,21 @@ if __name__ == "__main__":
         help    = "Skip files larger than this many megabytes (default: 500).",
     )
     parser.add_argument(
+        "--max-files",
+        type    = int,
+        default = 0,
+        metavar = "N",
+        help    = "Stop after accepting N files. 0 = unlimited (default).",
+    )
+    parser.add_argument(
         "--follow-symlinks",
         action = "store_true",
         help   = "Follow symbolic links to directories.",
+    )
+    parser.add_argument(
+        "--include-hidden",
+        action = "store_true",
+        help   = "Scan directories that start with '.'",
     )
     parser.add_argument(
         "--ignore",
@@ -554,6 +805,12 @@ if __name__ == "__main__":
         metavar = "DIR",
         default = [],
         help    = "Additional directory names to ignore.",
+    )
+    parser.add_argument(
+        "--iter",
+        action = "store_true",
+        dest   = "use_iter",
+        help   = "Use memory-efficient streaming mode.",
     )
     parser.add_argument(
         "--json",
@@ -569,13 +826,41 @@ if __name__ == "__main__":
 
     _configure_logging(args.verbose)
 
+    extra_ignore = set(args.ignore) if args.ignore else None
+
     try:
-        result = scan_directory(
-            args.root,
-            extra_ignore_dirs = set(args.ignore) if args.ignore else None,
-            max_file_size_mb  = args.max_size,
-            follow_symlinks   = args.follow_symlinks,
-        )
+        if args.use_iter:
+            # Streaming mode — true memory efficiency
+            files: list[ScannedFile] = []
+            t_start = time.perf_counter()
+            for scanned in iter_scan_directory(
+                args.root,
+                extra_ignore_dirs = extra_ignore,
+                max_file_size_mb  = args.max_size,
+                max_files         = args.max_files,
+                follow_symlinks   = args.follow_symlinks,
+                include_hidden    = args.include_hidden,
+            ):
+                files.append(scanned)
+            elapsed = time.perf_counter() - t_start
+            # Build a minimal summary for display
+            result = ScanResult(
+                files   = files,
+                summary = ScanSummary(
+                    root_directory  = Path(args.root).resolve(),
+                    total_accepted  = len(files),
+                    elapsed_seconds = elapsed,
+                ),
+            )
+        else:
+            result = scan_directory(
+                args.root,
+                extra_ignore_dirs = extra_ignore,
+                max_file_size_mb  = args.max_size,
+                max_files         = args.max_files,
+                follow_symlinks   = args.follow_symlinks,
+                include_hidden    = args.include_hidden,
+            )
     except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
         print(f"[ERROR] {e}", file=sys.stderr)
         sys.exit(1)
@@ -592,7 +877,7 @@ if __name__ == "__main__":
             }
             for f in result.files
         ]
-        print(json.dumps(output, indent=2))
+        print(json_mod.dumps(output, indent=2))
     else:
         for f in result.files:
             print(f"  [{f.format_category:<14}]  {f.relative_path}")
