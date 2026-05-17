@@ -108,30 +108,31 @@ class TestRateLimiter:
 
     def test_rate_limiter_allowed(self, rate_limiter: RateLimiter):
         """Under limit, return True."""
-        allowed, info = rate_limiter.is_allowed("key-1")
+        allowed, remaining, reset_at = rate_limiter.is_allowed("key-1")
         assert allowed is True
-        assert info["remaining"] > 0
+        assert remaining > 0
+        assert isinstance(reset_at, float)
 
     def test_rate_limiter_blocked(self, rate_limiter: RateLimiter):
         """Over limit, return False."""
         # max_requests=3, so 4th should be blocked
         for i in range(3):
-            allowed, _ = rate_limiter.is_allowed("key-2")
+            allowed, remaining, _ = rate_limiter.is_allowed("key-2")
             assert allowed is True
 
-        allowed, info = rate_limiter.is_allowed("key-2")
+        allowed, remaining, _ = rate_limiter.is_allowed("key-2")
         assert allowed is False
-        assert info["remaining"] == 0
+        assert remaining == 0
 
     def test_rate_limiter_different_keys(self, rate_limiter: RateLimiter):
         """Different keys have independent limits."""
         for _ in range(3):
             rate_limiter.is_allowed("key-a")
         # key-a is blocked
-        allowed, _ = rate_limiter.is_allowed("key-a")
+        allowed, _, _ = rate_limiter.is_allowed("key-a")
         assert allowed is False
         # key-b is not
-        allowed, _ = rate_limiter.is_allowed("key-b")
+        allowed, _, _ = rate_limiter.is_allowed("key-b")
         assert allowed is True
 
 
