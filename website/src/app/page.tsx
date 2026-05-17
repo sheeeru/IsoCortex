@@ -1,14 +1,14 @@
 'use client';
 
-import { Navbar } from '@/components/isocortex/navbar';
-import { Hero } from '@/components/isocortex/hero';
-import { Features } from '@/components/isocortex/features';
-import { HowItWorks } from '@/components/isocortex/architecture';
-import { Demo } from '@/components/isocortex/demo';
-import { Pricing } from '@/components/isocortex/pricing';
-import { ApiPreview } from '@/components/isocortex/api-preview';
-import { CTA } from '@/components/isocortex/cta';
-import { Footer } from '@/components/isocortex/footer';
+import { Navbar } from '../../components/navbar';
+import { Hero } from '../../components/hero';
+import { Features } from '../../components/features';
+import { HowItWorks } from '../../components/architecture';
+import { Demo } from '../../components/demo';
+import { Pricing } from '../../components/pricing';
+import { ApiPreview } from '../../components/api-preview';
+import { CTA } from '../../components/cta';
+import { Footer } from '../../components/footer';
 
 export default function Home() {
   return (
