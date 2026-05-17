@@ -1,0 +1,2783 @@
+%% ========================================================================
+%% IsoCortex SRS v5.0 — Software Requirement Specification
+%% Complete Platform — Monetization Edition
+%% Lead Architect & Developer: Shaheer Qureshi
+%% Compile with: pdflatex SRS_v5.0.tex
+%% ========================================================================
+\documentclass[11pt,a4paper]{article}
+
+%% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{pifont}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{tocloft}
+
+%% --- Colors ---
+\definecolor{ctPurple}{HTML}{311B5B}
+\definecolor{ctGold}{HTML}{C59B47}
+\definecolor{ctLightBg}{HTML}{F5F3FA}
+\definecolor{ctDarkText}{HTML}{2D2D2D}
+\definecolor{ctAccentBlue}{HTML}{4A6FA5}
+\definecolor{ctAccentGreen}{HTML}{2E7D32}
+\definecolor{ctAccentRed}{HTML}{C62828}
+\definecolor{ctAccentOrange}{HTML}{E65100}
+\definecolor{ctCodeBg}{HTML}{F0EEF5}
+\definecolor{ctGray}{HTML}{6B6B6B}
+
+%% --- Hyperref Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=ctPurple,
+    urlcolor=ctAccentBlue,
+    citecolor=ctPurple,
+    pdfauthor={Shaheer Qureshi},
+    pdftitle={IsoCortex SRS v5.0},
+    pdfsubject={Software Requirement Specification},
+}
+
+%% --- Listings Setup ---
+\lstset{
+    backgroundcolor=\color{ctCodeBg},
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{ctPurple!30},
+    keywordstyle=\color{ctPurple}\bfseries,
+    commentstyle=\color{ctGray}\itshape,
+    stringstyle=\color{ctAccentGreen},
+    showstringspaces=false,
+    tabsize=2,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    aboveskip=6pt,
+    belowskip=6pt,
+}
+
+%% --- TColorbox Styles ---
+\newtcolorbox{reqbox}[1][]{
+    colback=ctLightBg,
+    colframe=ctPurple,
+    coltitle=white,
+    fonttitle=\bfseries,
+    title={#1},
+    arc=2pt,
+    boxrule=0.8pt,
+    left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable,
+}
+
+\newtcolorbox{notebox}[1][]{
+    colback=ctGold!8,
+    colframe=ctGold,
+    coltitle=white,
+    fonttitle=\bfseries,
+    title={#1},
+    arc=2pt,
+    boxrule=0.8pt,
+    left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable,
+}
+
+\newtcolorbox{warningbox}[1][]{
+    colback=ctAccentRed!5,
+    colframe=ctAccentRed,
+    coltitle=white,
+    fonttitle=\bfseries,
+    title={#1},
+    arc=2pt,
+    boxrule=0.8pt,
+    left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable,
+}
+
+\newtcolorbox{endpointbox}[1][]{
+    colback=ctAccentBlue!5,
+    colframe=ctAccentBlue,
+    coltitle=white,
+    fonttitle=\bfseries\ttfamily,
+    title={#1},
+    arc=2pt,
+    boxrule=0.8pt,
+    left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable,
+}
+
+%% --- List Styles ---
+\setlist[itemize]{
+    label=\textcolor{ctPurple}{\textbullet},
+    leftmargin=12pt,
+    itemsep=3pt,
+    parsep=1pt,
+}
+
+\setlist[enumerate]{
+    label=\textcolor{ctPurple}{\bfseries\arabic*.},
+    leftmargin=16pt,
+    itemsep=3pt,
+    parsep=1pt,
+}
+
+%% --- Section Formatting ---
+\titleformat{\section}
+    {\color{ctPurple}\bfseries\Large}
+    {\color{ctPurple}\thesection}{1em}{}
+\titleformat{\subsection}
+    {\color{ctPurple!85!black}\bfseries\large}
+    {\color{ctPurple!85!black}\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\color{ctPurple!70!black}\bfseries\normalsize}
+    {\color{ctPurple!70!black}\thesubsubsection}{1em}{}
+
+%% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{ctPurple}{\footnotesize\textbf{IsoCortex SRS v5.0}}}
+\fancyhead[R]{\textcolor{ctGray}{\footnotesize Confidential}}
+\fancyfoot[L]{\textcolor{ctGray}{\footnotesize Shaheer Qureshi}}
+\fancyfoot[C]{\textcolor{ctGray}{\footnotesize\thepage}}
+\fancyfoot[R]{\textcolor{ctGray}{\footnotesize \today}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{ctPurple}\leaders\hrule height \headrulewidth\hfill}}
+
+%% --- Custom Commands ---
+\newcommand{\cmark}{\textcolor{ctAccentGreen}{\ding{51}}}
+\newcommand{\xmark}{\textcolor{ctAccentRed}{\ding{55}}}
+\newcommand{\inlinecode}[1]{\texttt{\small\colorbox{ctCodeBg}{#1}}}
+\newcommand{\apipath}[1]{\texttt{\small\textcolor{ctAccentBlue}{#1}}}
+%% emph is a LaTeX built-in; this line removed (was a no-op with a space in the command name)
+
+%% ========================================================================
+%% TITLE PAGE
+%% ========================================================================
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+
+%% Top decorative line
+{\color{ctPurple}\rule{\textwidth}{2pt}}
+
+\vspace{1cm}
+
+%% Logo / Brand Name
+{\fontsize{48}{56}\selectfont\bfseries\textcolor{ctPurple}{IsoCortex}}
+
+\vspace{0.5cm}
+
+{\Large\textcolor{ctGold}{\bfseries Software Requirement Specification (SRS)}}
+
+\vspace{0.3cm}
+
+{\large\textcolor{ctDarkText}{Complete Platform --- Monetization Edition}}
+
+\vspace{0.3cm}
+
+{\normalsize\textcolor{ctGray}{Version 5.1}}
+
+\vspace{1.5cm}
+
+%% Decorative separator
+{\color{ctGold}\rule{0.4\textwidth}{1pt}}
+
+\vspace{1cm}
+
+{\large\textcolor{ctDarkText}{Lead Architect \& Developer:}}\\[0.3cm]
+{\LARGE\textbf{\textcolor{ctPurple}{Shaheer Qureshi}}}
+
+\vspace{1.5cm}
+
+%% Metadata table
+\begin{tabular}{rl}
+    \textcolor{ctGray}{Document Type:} & Software Requirement Specification \\
+    \textcolor{ctGray}{Version:}       & 5.1 \\
+    \textcolor{ctGray}{Status:}        & Complete --- Major Revision \\
+    \textcolor{ctGray}{Date:}          & \today \\
+    \textcolor{ctGray}{Classification:}& Confidential \\
+\end{tabular}
+
+\vfill
+
+%% Bottom decorative line
+{\color{ctPurple}\rule{\textwidth}{2pt}}
+
+\vspace{0.5cm}
+{\footnotesize\textcolor{ctGray}{\copyright\ 2025--2026 Shaheer Qureshi. All rights reserved.}}
+\end{titlepage}
+
+%% ========================================================================
+%% DOCUMENT CONTROL
+%% ========================================================================
+\newpage
+\section*{Document Control}
+\addcontentsline{toc}{section}{Document Control}
+
+\begin{reqbox}[Revision History]
+\begin{longtable}{@{}p{1.5cm}p{2.5cm}p{2cm}p{8cm}@{}}
+\toprule
+\textbf{Ver} & \textbf{Date} & \textbf{Author} & \textbf{Changes} \\
+\midrule
+\endhead
+1.0 & --- & S.\ Qureshi & Initial draft \\
+2.0 & --- & S.\ Qureshi & Expanded API, added ingestion engine \\
+3.0 & --- & S.\ Qureshi & Added HNSW, web UI, monetization \\
+4.0 & --- & S.\ Qureshi & Comprehensive overhaul, Docker, CI/CD \\
+5.1 & \today & S.\ Qureshi & Fixed 12 warnings (NFR renumbering, ambiguities, missing FR sections); added Section 15: Monetization and Commercial Deployment (pricing tiers, multi-tenancy, billing, compliance) \\
+\bottomrule
+\end{longtable}
+\end{reqbox}
+
+\vspace{0.5cm}
+
+\begin{reqbox}[Distribution List]
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Role} & \textbf{Name} & \textbf{Access} \\
+\midrule
+Lead Architect & Shaheer Qureshi & Full \\
+Stakeholders & --- & Full \\
+Development Team & --- & Full \\
+QA Team & --- & Full \\
+\bottomrule
+\end{tabular}
+\end{reqbox}
+
+%% ========================================================================
+%% TABLE OF CONTENTS
+%% ========================================================================
+\newpage
+\tableofcontents
+\newpage
+
+%% ========================================================================
+%% 1. INTRODUCTION
+%% ========================================================================
+\section{Introduction}
+
+\subsection{Purpose}
+This Software Requirement Specification (SRS) defines the complete set of requirements for \textbf{IsoCortex v5.0}, a production-grade semantic search platform. IsoCortex transforms heterogeneous files into vector embeddings, builds high-performance HNSW indices, and provides REST, CLI, and web interfaces for semantic querying.
+
+This document serves as the authoritative reference for all stakeholders --- developers, QA engineers, project managers, and business analysts --- to understand the system's functional scope, architectural decisions, non-functional constraints, and operational specifications.
+
+Version 5.0 is a comprehensive rewrite that addresses critical production concerns: concurrency safety, memory management, asynchronous operations, user administration, index format stability, and robust error handling.
+
+\subsection{Scope}
+IsoCortex encompasses:
+
+\begin{itemize}
+    \item A \textbf{Python-based ingestion engine} supporting 7 document categories (PDFs, DOCX, Markdown, source code, CSV/JSON data, images via OCR, plain text)
+    \item An \textbf{HNSW (Hierarchical Navigable Small World)} index for approximate nearest neighbor (ANN) search with $O(\log N)$ query latency
+    \item A \textbf{REST API} built on FastAPI with full CRUD for indexes, documents, search, and administration
+    \item A \textbf{Web UI} built as a pure Single Page Application (SPA) with Next.js
+    \item A \textbf{CLI tool} for scripting and batch operations
+    \item \textbf{Authentication and user management} with role-based access control
+    \item \textbf{Analytics and monitoring} via SQLite-backed telemetry
+    \item \textbf{Docker deployment} with optimized multi-stage builds
+    \item \textbf{Export/Import} for index portability
+\end{itemize}
+
+\subsection{Definitions, Acronyms, and Abbreviations}
+
+\begin{longtable}{@{}p{3.5cm}p{10cm}@{}}
+\toprule
+\textbf{Term / Acronym} & \textbf{Definition} \\
+\midrule
+\endhead
+ANN & Approximate Nearest Neighbor --- algorithms that find approximate results significantly faster than exact search \\
+API & Application Programming Interface \\
+CLI & Command Line Interface \\
+Cosine Similarity & A metric measuring the cosine of the angle between two vectors; range $[-1, 1]$ \\
+DOCX & Microsoft Word Open XML Format \\
+Docker & Containerization platform for reproducible deployments \\
+Embedding & A fixed-length numerical vector representing semantic content \\
+FastAPI & Modern async Python web framework \\
+HNSW & Hierarchical Navigable Small World --- a graph-based ANN algorithm \\
+IDE & Integrated Development Environment \\
+JSON & JavaScript Object Notation \\
+LRU & Least Recently Used --- a cache eviction strategy \\
+MiniLM & A compact sentence transformer model (all-MiniLM-L6-v2) \\
+OCR & Optical Character Recognition \\
+PDF & Portable Document Format \\
+SSE & Server-Sent Events --- one-way real-time server push \\
+SPA & Single Page Application --- a web app that loads a single HTML page and dynamically updates content via JavaScript \\
+SRS & Software Requirement Specification \\
+SQLite & Embedded relational database engine \\
+UUID & Universally Unique Identifier \\
+WAL & Write-Ahead Logging --- a journaling mode for SQLite \\
+\bottomrule
+\end{longtable}
+
+\subsection{References}
+\begin{itemize}
+    \item Malkov, Yu A., \& Yashunin, D. A. (2018). \textit{Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs.} IEEE Transactions on Pattern Analysis and Machine Intelligence.
+    \item Reimers, N., \& Gurevych, I. (2019). \textit{Sentence-BERT: Sentence embeddings using Siamese BERT-networks.} EMNLP 2019.
+    \item FastAPI Documentation: \url{https://fastapi.tiangolo.com}
+    \item Uvicorn ASGI Server: \url{https://www.uvicorn.org}
+    \item SQLite WAL Mode: \url{https://www.sqlite.org/wal.html}
+\end{itemize}
+
+\subsection{Overview of Document}
+This SRS is organized as follows:
+
+\begin{itemize}
+    \item \textbf{Section 2} --- Overall description and system context
+    \item \textbf{Section 3} --- System architecture and component design
+    \item \textbf{Section 4} --- Concurrency model and thread safety guarantees
+    \item \textbf{Section 5} --- Functional requirements (ingestion, indexing, search, API, CLI, Web UI)
+    \item \textbf{Section 6} --- Authentication and user management
+    \item \textbf{Section 7} --- Index format versioning and migration
+    \item \textbf{Section 8} --- Async operations and long-running tasks
+    \item \textbf{Section 9} --- Non-functional requirements (performance, security, memory)
+    \item \textbf{Section 10} --- Error handling specification
+    \item \textbf{Section 11} --- Rate limiting
+    \item \textbf{Section 12} --- Known limitations
+    \item \textbf{Section 13} --- Development phases
+    \item \textbf{Section 14} --- Deployment
+    \item \textbf{Section 15} --- Monetization and commercial deployment
+    \item \textbf{Appendices} --- Format specification, configuration reference, error codes, glossary
+\end{itemize}
+
+%% ========================================================================
+%% 2. OVERALL DESCRIPTION
+%% ========================================================================
+\section{Overall Description}
+
+\subsection{Product Perspective}
+IsoCortex is a self-contained, deploy-anywhere semantic search platform. It does not depend on external vector databases (Pinecone, Weaviate, Milvus) or cloud services. All computation happens locally --- embedding generation, index construction, and query execution.
+
+The system is designed for:
+
+\begin{itemize}
+    \item \textbf{Enterprises} needing private, on-premise semantic search over internal documents
+    \item \textbf{Developers} building AI-powered applications requiring local vector search
+    \item \textbf{Researchers} performing semantic analysis over large document corpora
+    \item \textbf{Small teams} needing a turnkey solution without infrastructure overhead
+\end{itemize}
+
+\subsection{Product Functions}
+\begin{enumerate}
+    \item \textbf{Document Ingestion}: Parse 7+ file formats into chunked text with metadata
+    \item \textbf{Embedding Generation}: Convert text chunks to 384-dimensional vectors using MiniLM
+    \item \textbf{Index Construction}: Build HNSW indices with configurable parameters ($M$, $ef\_construction$, $ef\_search$)
+    \item \textbf{Semantic Search}: Query with natural language, receive ranked results with similarity scores
+    \item \textbf{Batch Search}: Execute multiple queries in a single API call
+    \item \textbf{Multi-Index Management}: Create, update, delete, and switch between independent indices
+    \item \textbf{Incremental Updates}: Add and remove documents without full rebuild
+    \item \textbf{User Management}: Administer users with role-based access control
+    \item \textbf{Analytics}: Track search patterns, popular queries, and system health
+    \item \textbf{Export/Import}: Package and transfer complete indices for backup or sharing
+\end{enumerate}
+
+\subsection{User Characteristics}
+
+\begin{longtable}{@{}p{3cm}p{4cm}p{6cm}@{}}
+\toprule
+\textbf{User Type} & \textbf{Expertise} & \textbf{Interaction Pattern} \\
+\midrule
+\endhead
+End User & Basic computer literacy & Web UI for searching documents \\
+Developer & Python, REST APIs & CLI and API for programmatic access \\
+Admin & System administration & Web UI and API for user/system management \\
+Integrator & DevOps, Docker & Docker Compose for deployment \\
+\bottomrule
+\end{longtable}
+
+\subsection{Constraints}
+\begin{itemize}
+    \item \textbf{Python 3.10+} required for runtime
+    \item \textbf{CPU-only} inference (no GPU dependency in v1.0)
+    \item \textbf{Single-node} architecture (no distributed search)
+    \item \textbf{SQLite} for metadata and analytics (not PostgreSQL --- keeps deployment zero-config)
+    \item \textbf{No cloud dependencies} for core functionality
+    \item \textbf{Maximum practical index size}: $\sim$10M vectors (memory limited)
+\end{itemize}
+
+\subsection{Assumptions and Dependencies}
+\begin{itemize}
+    \item Host machine has at least 4 GB RAM for comfortable operation with small-to-medium indices
+    \item Internet connection available for first-time model download
+    \item File system supports extended attributes (for metadata storage)
+    \item Modern browser (Chrome, Firefox, Safari, Edge) for Web UI
+    \item Docker 20.10+ and Docker Compose v2+ for containerized deployment
+\end{itemize}
+
+%% ========================================================================
+%% 3. SYSTEM ARCHITECTURE
+%% ========================================================================
+\section{System Architecture}
+
+\subsection{High-Level Architecture}
+
+IsoCortex follows a layered architecture with clear separation of concerns:
+
+\begin{reqbox}[Layer Stack]
+\begin{enumerate}
+    \item \textbf{Presentation Layer} --- Web UI (Next.js SPA), CLI (Typer)
+    \item \textbf{API Layer} --- FastAPI REST endpoints, authentication middleware
+    \item \textbf{Service Layer} --- Search engine, index manager, user manager, job scheduler
+    \item \textbf{Core Layer} --- HNSW implementation, embedding provider, extractor pipeline
+    \item \textbf{Storage Layer} --- File system (vectors, indices, models), SQLite (metadata, analytics, rate limits)
+\end{enumerate}
+\end{reqbox}
+
+\subsection{Component Diagram}
+
+The system comprises the following primary components:
+
+\begin{itemize}
+    \item \textbf{Ingestion Engine}: Routes files to category-specific extractors, chunks text, extracts metadata
+    \item \textbf{Embedding Provider}: Generates vector embeddings with pluggable model support
+    \item \textbf{HNSW Index}: Graph-based ANN index with configurable construction and search parameters
+    \item \textbf{Index Manager}: Orchestrates multi-index CRUD, versioning, compaction, and serialization
+    \item \textbf{Search Engine}: Handles single and batch semantic search with pagination and filtering
+    \item \textbf{API Server}: FastAPI application serving REST endpoints with middleware pipeline
+    \item \textbf{Auth Module}: JWT-based authentication with bcrypt password hashing
+    \item \textbf{User Manager}: Role-based user administration (admin/user roles)
+    \item \textbf{Job Scheduler}: Manages asynchronous long-running tasks (index creation, export/import)
+    \item \textbf{Analytics Engine}: SQLite-backed query logging, usage metrics, and health monitoring
+    \item \textbf{Rate Limiter}: SQLite-backed sliding window rate limiting per API key and endpoint
+    \item \textbf{CLI Interface}: Typer-based command-line tool for all operations
+    \item \textbf{Web UI}: Next.js SPA providing visual management and search interface
+\end{itemize}
+
+\subsection{Directory Structure}
+
+\begin{lstlisting}[language={},title={Project Layout}]
+isocortex/
+  src/
+    api/                  # FastAPI application
+      routes/             # Route handlers
+      middleware/         # Auth, rate limiting, logging
+      schemas/            # Pydantic models
+    core/
+      hnsw/               # HNSW implementation
+      embedding/          # Embedding provider ABC + MiniLM
+      extractor/          # FileExtractor ABC + registry
+      search/             # Search engine + batch search
+    engine/
+      ingestion/          # Ingestion pipeline
+      indexing/           # Index manager
+      jobs/               # Async job scheduler
+      analytics/          # Analytics engine
+    auth/                 # Authentication + user management
+    storage/              # SQLite, file I/O helpers
+    config/               # Configuration management
+  models/                 # Downloaded embedding models
+  indices/                # HNSW index data directory
+  web/                    # Next.js SPA source
+  cli/                    # Typer CLI entry point
+  Dockerfile
+  docker-compose.yml
+  pyproject.toml
+\end{lstlisting}
+
+\subsection{Data Flow}
+
+\begin{enumerate}
+    \item User uploads files or provides a directory path
+    \item Ingestion engine routes files to appropriate extractors based on file extension
+    \item Extracted text is chunked into semantically meaningful segments (overlap configurable)
+    \item Chunks are queued for embedding generation
+    \item Embedding provider converts text chunks to 384-dimensional float32 vectors
+    \item Vectors and metadata are inserted into the HNSW index
+    \item Index is serialized to disk (vectors.bin + metadata.json + hnsw\_index.bin)
+    \item Query text is embedded and compared against the index
+    \item Top-$k$ results are returned with similarity scores (normalized per metric), paginated
+\end{enumerate}
+
+\subsection{Embedding Model Management}
+
+\begin{reqbox}[Embedding Model Lifecycle]
+The system manages embedding models with a well-defined lifecycle:
+
+\textbf{Download on First Run:}
+\begin{itemize}
+    \item On first startup, IsoCortex downloads the default model (all-MiniLM-L6-v2) from Hugging Face
+    \item Progress indicator shows download percentage and estimated time remaining
+    \item Model is cached in \inlinecode{\textasciitilde/.isocortex/models/} for subsequent runs
+    \item SHA-256 checksum validation ensures download integrity
+\end{itemize}
+
+\textbf{Pluggable Embedding Interface:}
+\begin{itemize}
+    \item Abstract base class: \inlinecode{EmbeddingProvider} defines \inlinecode{embed(text) -> np.ndarray}
+    \item Default implementation: \inlinecode{MiniLMProvider} using sentence-transformers
+    \item Future: Enterprise tier supports custom embedding models via provider registration
+\end{itemize}
+
+\textbf{Model Caching:}
+\begin{itemize}
+    \item Models stored persistently in \inlinecode{\textasciitilde/.isocortex/models/}
+    \item Version-pinned model identifiers prevent silent model changes
+    \item Cache directory structure: \inlinecode{models/\{model\_id\}/config.json}, \inlinecode{model\_weights.bin}
+\end{itemize}
+\end{reqbox}
+
+\begin{lstlisting}[language=Python,title={EmbeddingProvider ABC}]
+from abc import ABC, abstractmethod
+import numpy as np
+
+class EmbeddingProvider(ABC):
+    @abstractmethod
+    def embed(self, text: str) -> np.ndarray:
+        """Embed a single text string into a vector."""
+        pass
+
+    @abstractmethod
+    def embed_batch(self, texts: list[str]) -> np.ndarray:
+        """Embed multiple text strings into vectors."""
+        pass
+
+    @abstractmethod
+    def dimension(self) -> int:
+        """Return the embedding dimension."""
+        pass
+
+    @abstractmethod
+    def model_id(self) -> str:
+        """Return the unique model identifier."""
+        pass
+\end{lstlisting}
+
+\subsection{Plugin Architecture for Extractors}
+
+\begin{reqbox}[Extractor Plugin System]
+IsoCortex uses a registry-based plugin architecture for document extractors, enabling extensibility and community contributions.
+
+\textbf{FileExtractor ABC:}
+\begin{itemize}
+    \item \inlinecode{supported\_extensions() -> list[str]}: Declares which file extensions this extractor handles
+    \item \inlinecode{extract(file\_path: Path) -> list[ExtractedChunk]}: Parses a file into text chunks with metadata
+    \item \inlinecode{priority() -> int}: Determines load order when multiple extractors support the same extension (lower = higher priority)
+\end{itemize}
+
+\textbf{Registry Pattern:}
+\begin{itemize}
+    \item \inlinecode{ExtractorRegistry} maintains a global registry of all extractors
+    \item \inlinecode{register(extractor: FileExtractor)}: Registers an extractor class
+    \item \inlinecode{get\_extractor(extension: str) -> FileExtractor}: Returns the highest-priority extractor for a given extension
+    \item Extractors are auto-discovered from built-in modules at startup
+\end{itemize}
+
+\textbf{Built-in Extractors:}
+\begin{itemize}
+    \item \inlinecode{PdfExtractor}: PDF parsing via PyMuPDF
+    \item \inlinecode{DocxExtractor}: DOCX parsing via python-docx
+    \item \inlinecode{MarkdownExtractor}: Markdown parsing with front-matter support
+    \item \inlinecode{CodeExtractor}: Source code with AST-aware chunking
+    \item \inlinecode{DataExtractor}: CSV/JSON tabular data
+    \item \inlinecode{ImageExtractor}: OCR via Tesseract for scanned documents
+    \item \inlinecode{TextExtractor}: Plain text with encoding detection
+\end{itemize}
+
+\textbf{Custom Extractors:}
+\begin{itemize}
+    \item User-provided extractors loaded from \inlinecode{\textasciitilde/.isocortex/extractors/}
+    \item Each custom extractor is a Python module implementing \inlinecode{FileExtractor}
+    \item Loaded at startup with automatic validation
+\end{itemize}
+\end{reqbox}
+
+\begin{lstlisting}[language=Python,title={FileExtractor ABC and Registry}]
+from abc import ABC, abstractmethod
+from pathlib import Path
+from dataclasses import dataclass
+
+@dataclass
+class ExtractedChunk:
+    text: str
+    metadata: dict
+    page: int | None = None
+    chunk_index: int = 0
+
+class FileExtractor(ABC):
+    @abstractmethod
+    def supported_extensions(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def extract(self, file_path: Path) -> list[ExtractedChunk]:
+        pass
+
+    def priority(self) -> int:
+        return 100  # default priority
+
+class ExtractorRegistry:
+    _extractors: dict[str, FileExtractor] = {}
+
+    @classmethod
+    def register(cls, extractor: FileExtractor) -> None:
+        for ext in extractor.supported_extensions():
+            if ext not in cls._extractors or \
+               extractor.priority() < cls._extractors[ext].priority():
+                cls._extractors[ext] = extractor
+
+    @classmethod
+    def get_extractor(cls, extension: str) -> FileExtractor | None:
+        return cls._extractors.get(extension.lower())
+\end{lstlisting}
+
+%% ========================================================================
+%% 4. CONCURRENCY MODEL
+%% ========================================================================
+\section{Concurrency Model}
+
+\subsection{Overview}
+
+IsoCortex is designed to handle concurrent access safely across all modules. The concurrency model addresses three primary concerns: \textbf{HNSW index thread safety}, \textbf{embedding request handling}, and \textbf{database concurrent access}. The API server itself runs under Uvicorn with configurable worker processes.
+
+\subsection{HNSW Index: ReadWriteLock}
+
+The HNSW index uses a \textbf{ReadWriteLock} (reader-writer lock) pattern to allow multiple concurrent readers while ensuring exclusive access for writers:
+
+\begin{reqbox}[HNSW Concurrency Guarantees]
+\begin{itemize}
+    \item \textbf{Multiple concurrent readers}: Search queries execute simultaneously without blocking each other
+    \item \textbf{Exclusive writer}: Only one write operation (insert, delete, update) can modify the index at a time
+    \item \textbf{Writer priority}: Pending write operations are given priority over new read locks to prevent writer starvation
+    \item \textbf{Read-during-write safety}: Readers that acquired a lock before a writer began continue safely; new readers wait until the write completes
+\end{itemize}
+\end{reqbox}
+
+\begin{lstlisting}[language=Python,title={ReadWriteLock Implementation Sketch}]
+import threading
+
+class ReadWriteLock:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._readers = threading.Condition(self._lock)
+        self._reader_count = 0
+        self._writer_active = False
+        self._writer_waiting = 0
+
+    def acquire_read(self):
+        with self._readers:
+            while self._writer_active or self._writer_waiting > 0:
+                self._readers.wait()
+            self._reader_count += 1
+
+    def release_read(self):
+        with self._readers:
+            self._reader_count -= 1
+            if self._reader_count == 0:
+                self._readers.notify_all()
+
+    def acquire_write(self):
+        with self._readers:
+            self._writer_waiting += 1
+            while self._reader_count > 0 or self._writer_active:
+                self._readers.wait()
+            self._writer_waiting -= 1
+            self._writer_active = True
+
+    def release_write(self):
+        with self._readers:
+            self._writer_active = False
+            self._readers.notify_all()
+\end{lstlisting}
+
+\subsection{Embedder Request Queue}
+
+The embedding model (MiniLM) is \textbf{not thread-safe} by default. IsoCortex uses a single-threaded model inference queue with async request handling:
+
+\begin{itemize}
+    \item \textbf{Single inference thread}: All embedding computations run on a dedicated thread to avoid race conditions
+    \item \textbf{Async queue}: API handlers submit embedding requests to an \inlinecode{asyncio.Queue} and await results via \inlinecode{asyncio.Future}
+    \item \textbf{Batch optimization}: Multiple pending requests are batched together for efficient GPU/CPU inference (even on CPU, batched inference is faster than sequential)
+    \item \textbf{Backpressure}: Queue has a maximum depth; when full, new requests receive a 503 Service Unavailable response
+    \item \textbf{Embedding cache}: LRU cache (configurable, default 1000 entries) maps \inlinecode{str(query)} to \inlinecode{np.ndarray}, eliminating repeated computations
+\end{itemize}
+
+\begin{lstlisting}[language=Python,title={Embedding Queue Sketch}]
+import asyncio
+from collections import OrderedDict
+import numpy as np
+
+class EmbeddingQueue:
+    def __init__(self, provider: EmbeddingProvider, cache_size: int = 1000):
+        self._provider = provider
+        self._queue: asyncio.Queue = asyncio.Queue(maxsize=500)
+        self._cache: OrderedDict[str, np.ndarray] = OrderedDict()
+        self._cache_size = cache_size
+        self._running = False
+
+    async def embed(self, text: str) -> np.ndarray:
+        # Check cache first
+        key = text
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+
+        # Submit to queue and wait
+        future = asyncio.get_event_loop().create_future()
+        await self._queue.put((key, future))
+        result = await future
+
+        # Update cache
+        self._cache[key] = result
+        if len(self._cache) > self._cache_size:
+            self._cache.popitem(last=False)
+        return result
+
+    async def _worker(self):
+        while self._running:
+            batch = []
+            futures = []
+            # Collect up to 32 pending requests
+            try:
+                item = self._queue.get_nowait()
+                batch.append(item[0])
+                futures.append(item[1])
+                while len(batch) < 32:
+                    item = self._queue.get_nowait()
+                    batch.append(item[0])
+                    futures.append(item[1])
+            except asyncio.QueueEmpty:
+                pass
+
+            if batch:
+                vectors = self._provider.embed_batch(batch)
+                for f, v in zip(futures, vectors):
+                    f.set_result(v)
+            else:
+                await asyncio.sleep(0.01)
+\end{lstlisting}
+
+\subsection{SQLite WAL Mode}
+
+The analytics database uses SQLite in \textbf{WAL (Write-Ahead Logging)} mode for concurrent read/write access:
+
+\begin{itemize}
+    \item \textbf{Concurrent reads}: Multiple readers can query the database simultaneously without blocking
+    \item \textbf{Single concurrent writer}: One writer can write while readers continue reading
+    \item \textbf{No reader-writer blocking}: Readers do not block writers and writers do not block readers
+    \item \textbf{Durability}: WAL mode provides crash recovery without sacrificing performance
+    \item \textbf{Connection pool}: Uses \inlinecode{sqlite3.connect()} with \inlinecode{check\_same\_thread=False} and a connection pool of 5 connections
+\end{itemize}
+
+Configuration:
+\begin{lstlisting}[language=Python]
+import sqlite3
+
+conn = sqlite3.connect("analytics.db")
+conn.execute("PRAGMA journal_mode=WAL")
+conn.execute("PRAGMA busy_timeout=5000")
+conn.execute("PRAGMA synchronous=NORMAL")
+conn.execute("PRAGMA wal_autocheckpoint=1000")
+\end{lstlisting}
+
+\subsection{API Server Concurrency}
+
+The API server uses \textbf{Uvicorn} with configurable worker count:
+
+\begin{itemize}
+    \item Default: single worker (\inlinecode{uvicorn isocortex.api:app})
+    \item Production: multi-worker (\inlinecode{uvicorn isocortex.api:app --workers 4})
+    \item State shared across workers via SQLite (rate limits, analytics) and file system (indices)
+    \item Each worker maintains its own in-memory embedding cache (no cross-worker cache sharing)
+    \item HNSW ReadWriteLock operates per-process; file-based locking coordinates cross-process access when needed
+\end{itemize}
+
+\subsection{Thread Safety Summary}
+
+\begin{longtable}{@{}p{4cm}p{3cm}p{6.5cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Mechanism} & \textbf{Guarantee} \\
+\midrule
+\endhead
+HNSW Index & ReadWriteLock & Multi-reader, exclusive writer; no data corruption \\
+Embedding Provider & Single worker thread + queue & Sequential inference; thread-safe by design \\
+Embedding Cache & OrderedDict (in-process) & Safe within single process; no cross-process sharing \\
+SQLite Analytics & WAL mode + pool & Concurrent reads, serialized writes \\
+SQLite Rate Limits & WAL mode + pool & Cross-worker visibility; persistent across restarts \\
+Index Manager & ReadWriteLock + file locks & Safe cross-process index access \\
+Job Scheduler & asyncio event loop & Single event loop per worker; job state in SQLite \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% 5. FUNCTIONAL REQUIREMENTS
+%% ========================================================================
+\section{Functional Requirements}
+
+\subsection{Document Ingestion}
+
+\subsubsection{FR-ING-001: File Category Support}
+
+The ingestion engine supports 7 document categories, each handled by a dedicated extractor plugin:
+
+\begin{longtable}{@{}p{2.5cm}p{3cm}p{3cm}p{4.5cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Extensions} & \textbf{Extractor} & \textbf{Processing Notes} \\
+\midrule
+\endhead
+PDF & .pdf & PdfExtractor & Page-by-page extraction; OCR fallback for scanned pages \\
+Word & .docx & DocxExtractor & Paragraph-level extraction; preserves headers/styles \\
+Markdown & .md, .rst & MarkdownExtractor & Front-matter parsing; code block preservation \\
+Source Code & .py, .js, .ts, .java, .go, .rs, .cpp, .c, .h & CodeExtractor & AST-aware chunking; syntax-aware splitting \\
+Data & .csv, .json, .tsv & DataExtractor & Row-level or record-level chunking \\
+Image & .png, .jpg, .jpeg, .tiff, .bmp & ImageExtractor & OCR via Tesseract; configurable language \\
+Plain Text & .txt, .log, .cfg, .ini & TextExtractor & Encoding auto-detection; line/paragraph chunking \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{FR-ING-002: Text Chunking}
+
+Documents are split into chunks optimized for embedding:
+
+\begin{itemize}
+    \item \textbf{Default chunk size}: 512 tokens (approximately 350--400 words)
+    \item \textbf{Overlap}: 50 tokens between consecutive chunks to preserve context at boundaries
+    \item \textbf{Configurable}: Both chunk size and overlap are configurable per index
+    \item \textbf{Metadata preservation}: Each chunk retains source file name, page/section, chunk index, and timestamps
+    \item \textbf{Minimum chunk size}: Chunks shorter than 10 tokens are merged with adjacent chunks
+\end{itemize}
+
+\subsubsection{FR-ING-003: Directory Ingestion}
+
+\begin{itemize}
+    \item Recursive directory traversal with configurable depth limit
+    \item Glob-based include/exclude patterns (\inlinecode{**/*.pdf}, \inlinecode{!**/node\_modules/**})
+    \item Maximum file size limit (default: 50 MB per file)
+    \item Skip duplicate files detected by SHA-256 hash
+    \item Progress reporting: files processed / total files found
+\end{itemize}
+
+\subsection{Embedding Generation}
+
+\subsubsection{FR-EMB-001: Default Model}
+
+\begin{itemize}
+    \item Model: \textbf{all-MiniLM-L6-v2} (Sentence Transformers)
+    \item Dimensions: 384 (float32)
+    \item Model size: $\sim$80 MB
+    \item Inference speed: $\sim$1000 embeddings/second on modern CPU (batched)
+    \item Quality: Good balance of quality and speed for general-purpose semantic search
+\end{itemize}
+
+\subsubsection{FR-EMB-002: Embedding Cache}
+
+\begin{reqbox}[LRU Embedding Cache]
+To avoid redundant embedding computations, IsoCortex implements an in-memory LRU cache:
+
+\begin{itemize}
+    \item \textbf{Key}: \inlinecode{str(query\_text)} (exact string match)
+    \item \textbf{Value}: \inlinecode{np.ndarray} of shape (384,)
+    \item \textbf{Default size}: 1000 entries
+    \item \textbf{Configurable}: \inlinecode{embedding.cache\_size} in configuration
+    \item \textbf{Invalidation}: Cache is cleared entirely when the embedding model changes
+    \item \textbf{Thread safety}: OrderedDict protected by the single embedder thread (no additional locking needed)
+    \item \textbf{NFR target}: $>$80\% cache hit rate for repeated queries within a session
+\end{itemize}
+\end{reqbox}
+
+\subsection{HNSW Index}
+
+\subsubsection{FR-IDX-001: Index Construction}
+
+HNSW indices are constructed with the following configurable parameters:
+
+\begin{longtable}{@{}p{3.5cm}p{2cm}p{2cm}p{6.5cm}@{}}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Range} & \textbf{Description} \\
+\midrule
+\endhead
+$M$ & 16 & 4--128 & Number of bidirectional links per layer \\
+$ef\_construction$ & 200 & 50--2000 & Size of dynamic candidate list during construction \\
+$ef\_search$ & 50 & 10--500 & Size of dynamic candidate list during search \\
+max\_elements & 100000 & 100--10M & Maximum number of vectors in the index \\
+metric & cosine & cosine / l2 / ip & Distance metric for similarity computation \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{FR-IDX-002: Soft Delete Pattern}
+
+\begin{reqbox}[Soft Delete for HNSW Vectors]
+Deleting vectors from an HNSW graph without a full rebuild is achieved through a soft-delete (tombstone) pattern:
+
+\textbf{Mechanism:}
+\begin{itemize}
+    \item Each vector has a \inlinecode{deleted: bool} flag in the metadata store
+    \item \textbf{Tombstone marking}: Delete operations set \inlinecode{deleted = True} rather than removing the vector from the graph
+    \item \textbf{Search filtering}: Query execution skips tombstoned vectors during candidate evaluation
+    \item \textbf{No structural change}: The HNSW graph topology remains unchanged during soft delete
+\end{itemize}
+
+\textbf{Compaction:}
+\begin{itemize}
+    \item Triggered when tombstoned vectors exceed a configurable threshold (default: 10\% of total vectors)
+    \item Compaction rebuilds the HNSW graph including only non-tombstoned entries
+    \item Runs as an async job (non-blocking) --- returns job\_id for progress tracking
+    \item Compaction result: reduced memory footprint, restored search precision
+    \item \textbf{Threshold}: \inlinecode{compaction.threshold = 0.10} (10\% tombstoned triggers compaction)
+\end{itemize}
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item \cmark{} Instant deletion (no rebuild latency)
+    \item \cmark{} Batch deletions are $O(1)$ per vector (metadata update only)
+    \item \cmark{} Search performance degrades gracefully (minor overhead for tombstone check)
+    \item \cmark{} Eliminates the need for full rebuild on every deletion
+\end{itemize}
+\end{reqbox}
+
+\subsubsection{FR-IDX-003: Incremental Updates}
+
+\begin{itemize}
+    \item New vectors can be added to an existing index without reconstruction
+    \item Soft-deleted vectors are filtered at search time
+    \item Compaction optimizes the graph periodically (see FR-IDX-002)
+    \item Index metadata (file mappings, timestamps) updated atomically
+\end{itemize}
+
+\subsection{REST API}
+
+\subsubsection{API Design Principles}
+
+\begin{itemize}
+    \item \textbf{RESTful}: Resource-oriented with standard HTTP verbs
+    \item \textbf{Consistent paths}: All index-scoped endpoints use the path parameter pattern \apipath{/api/v1/indexes/\{name\}/...}
+    \item \textbf{JSON}: All request/response bodies use JSON
+    \item \textbf{Versioned}: API prefix \apipath{/api/v1/} for forward compatibility
+    \item \textbf{Pagination}: Search results support page/page\_size parameters
+    \item \textbf{Error format}: Standardized error envelope with request\_id
+    \item \textbf{Async jobs}: Long-running operations return 202 Accepted with job\_id
+\end{itemize}
+
+\subsubsection{FR-API-001: Index Management Endpoints}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+POST & \apipath{/api/v1/indexes} & JWT & Create new index (returns 202 + job\_id) \\
+GET & \apipath{/api/v1/indexes} & JWT & List all indexes with metadata \\
+GET & \apipath{/api/v1/indexes/\{name\}} & JWT & Get index details and statistics \\
+PUT & \apipath{/api/v1/indexes/\{name\}} & JWT & Update index configuration \\
+DELETE & \apipath{/api/v1/indexes/\{name\}} & JWT & Delete index (returns 202 + job\_id) \\
+\bottomrule
+\end{longtable}
+
+\textbf{Create Index Request:}
+\begin{lstlisting}[language=JSON]
+{
+  "name": "my-docs",
+  "description": "Company documentation",
+  "files": ["/path/to/documents"],
+  "exclude_patterns": ["**/node_modules/**"],
+  "embedding": {
+    "model": "all-MiniLM-L6-v2",
+    "chunk_size": 512,
+    "chunk_overlap": 50
+  },
+  "hnsw": {
+    "M": 16,
+    "ef_construction": 200,
+    "ef_search": 50,
+    "metric": "cosine"
+  }
+}
+\end{lstlisting}
+
+\subsubsection{FR-API-002: Search Endpoints}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+POST & \apipath{/api/v1/indexes/\{name\}/search} & JWT & Semantic search with pagination \\
+POST & \apipath{/api/v1/indexes/\{name\}/search/batch} & JWT & Batch semantic search (max 50 queries) \\
+\bottomrule
+\end{longtable}
+
+\textbf{Single Search Request Body:}
+\begin{lstlisting}[language=JSON]
+{
+  "query": "How does authentication work?",
+  "k": 10,
+  "page": 1,
+  "page_size": 10,
+  "filters": {
+    "file_extension": [".pdf", ".md"],
+    "source": "internal-docs"
+  }
+}
+\end{lstlisting}
+
+\textbf{Single Search Response:}
+\begin{lstlisting}[language=JSON]
+{
+  "request_id": "uuid-here",
+  "results": [
+    {
+      "id": "doc-chunk-uuid",
+      "text": "Authentication is handled by...",
+      "metadata": {
+        "source_file": "auth.md",
+        "page": 3,
+        "chunk_index": 2,
+        "file_extension": ".md",
+        "metric": "cosine"
+      },
+      "score": 0.9234,
+      "rank": 1
+    }
+  ],
+  "pagination": {
+    "total_results": 47,
+    "page": 1,
+    "page_size": 10,
+    "total_pages": 5
+  }
+}
+\end{lstlisting}
+
+\textbf{Score Semantics:} The \inlinecode{score} field is always normalized so that \textbf{higher values indicate greater similarity}, regardless of the index's \inlinecode{metric} setting. For \inlinecode{cosine}, the raw cosine similarity is returned ($[-1, 1]$, higher $=$ more similar). For \inlinecode{l2}, the score is computed as $1 / (1 + \text{distance})$, yielding a $(0, 1]$ range where higher $=$ more similar. For \inlinecode{ip} (inner product), the raw dot product is returned (unbounded; higher $=$ more similar). The index's active metric is included in every search response under \inlinecode{metadata.metric}.
+
+\subsubsection{FR-API-003: Pagination Specification}
+
+\begin{reqbox}[Pagination Design]
+Search results support \textbf{offset-based pagination} with an optional \textbf{cursor-based} mode for large result sets:
+
+\textbf{Offset-Based (default):}
+\begin{itemize}
+    \item \inlinecode{page}: Page number, starting from 1 (default: 1)
+    \item \inlinecode{page\_size}: Results per page, 1--100 (default: 10)
+    \item Response includes: \inlinecode{total\_results}, \inlinecode{page}, \inlinecode{page\_size}, \inlinecode{total\_pages}
+    \item Suitable for result sets up to $\sim$100K results
+\end{itemize}
+
+\textbf{Cursor-Based (optional):}
+\begin{itemize}
+    \item Activate by setting \inlinecode{"pagination": "cursor"} in the search request
+    \item Returns \inlinecode{next\_cursor} and \inlinecode{has\_more} in the response
+    \item Subsequent requests include \inlinecode{"cursor": "<next\_cursor>"}
+    \item Suitable for streaming through very large result sets without offsets
+    \item No \inlinecode{total\_pages} field (cursor pagination cannot determine total count efficiently)
+\end{itemize}
+
+\textbf{Constraints:}
+\begin{itemize}
+    \item \inlinecode{page\_size} maximum: 100 (server-enforced)
+    \item \inlinecode{k} must be $\geq$ \inlinecode{page\_size} to ensure enough candidates
+    \item If \inlinecode{k < page\_size}, server auto-adjusts \inlinecode{k} to \inlinecode{page\_size} and logs a warning
+\end{itemize}
+\end{reqbox}
+
+\subsubsection{FR-API-004: Document Endpoints}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+GET & \apipath{/api/v1/indexes/\{name\}/documents} & JWT & List all documents in index (paginated) \\
+GET & \apipath{/api/v1/indexes/\{name\}/documents/\{id\}} & JWT & Get specific document chunk by ID \\
+POST & \apipath{/api/v1/indexes/\{name\}/documents} & JWT & Add documents to existing index \\
+DELETE & \apipath{/api/v1/indexes/\{name\}/documents/\{id\}} & JWT & Soft-delete a document chunk \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{FR-API-005: Batch Search Specification}
+
+\begin{reqbox}[Batch Search API]
+The batch search endpoint enables efficient execution of multiple queries in a single API call:
+
+\textbf{Endpoint:} \apipath{POST /api/v1/indexes/\{name\}/search/batch}
+
+\textbf{Request:}
+\begin{lstlisting}[language=JSON]
+{
+  "queries": [
+    {"query": "How does auth work?", "k": 5},
+    {"query": "API rate limits", "k": 3},
+    {"query": "Docker deployment", "k": 10}
+  ],
+  "timeout": 30
+}
+\end{lstlisting}
+
+\textbf{Constraints:}
+\begin{itemize}
+    \item \inlinecode{max\_queries}: 50 per batch request
+    \item \inlinecode{timeout}: Per-query timeout in seconds (default: 30s, max: 120s)
+    \item Each query can specify its own \inlinecode{k} value and \inlinecode{filters}
+    \item \inlinecode{page} and \inlinecode{page\_size} apply per-query within each result
+\end{itemize}
+
+\textbf{Partial Success:}
+\begin{itemize}
+    \item Valid queries execute and return results
+    \item Invalid queries return an error object in their response slot (not a 4xx for the whole request)
+    \item Overall HTTP status is 207 Multi-Status if some queries failed
+    \item Overall HTTP status is 200 if all queries succeeded
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item Queries are processed in parallel with configurable concurrency (default: 4 concurrent)
+    \item Embedding computations are batched across queries for efficiency
+    \item Total batch timeout is \inlinecode{max(timeout * num\_queries / concurrency, timeout)}
+\end{itemize}
+
+\textbf{Response:}
+\begin{lstlisting}[language=JSON]
+{
+  "request_id": "uuid-here",
+  "results": [
+    {
+      "query": "How does auth work?",
+      "status": "success",
+      "results": [...],
+      "pagination": {...}
+    },
+    {
+      "query": "API rate limits",
+      "status": "success",
+      "results": [...],
+      "pagination": {...}
+    },
+    {
+      "query": "Invalid query with special chars!!!",
+      "status": "error",
+      "error": {
+        "code": 400,
+        "message": "Query too short (minimum 3 characters)"
+      }
+    }
+  ]
+}
+\end{lstlisting}
+\end{reqbox}
+
+\subsubsection{FR-API-006: Export/Import Endpoints}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+POST & \apipath{/api/v1/indexes/\{name\}/export} & JWT & Export index as .isocortex archive (202 + job\_id) \\
+POST & \apipath{/api/v1/indexes/import} & JWT & Import .isocortex archive (202 + job\_id) \\
+GET & \apipath{/api/v1/jobs/\{job\_id\}} & JWT & Check export/import job status \\
+\bottomrule
+\end{longtable}
+
+\subsection{CLI Interface}
+
+\subsubsection{FR-CLI-001: Command Structure}
+
+\begin{lstlisting}[language={},title={CLI Commands}]
+isocortex index create --name my-docs --path ./documents
+isocortex index list
+isocortex index info my-docs
+isocortex index delete my-docs
+isocortex index export my-docs --output ./archive.isocortex
+isocortex index import ./archive.isocortex
+
+isocortex search my-docs --query "How does auth work?" --top-k 5
+
+isocortex serve --host 0.0.0.0 --port 8000 --workers 4
+
+isocortex user create --username admin --role admin
+isocortex user list
+isocortex user delete <user_id>
+\end{lstlisting}
+
+\subsection{Web UI}
+
+\subsubsection{FR-WEB-001: Pure SPA Architecture}
+
+\begin{reqbox}[Web UI Design Decisions]
+The Web UI is built as a \textbf{pure Single Page Application (SPA)} using Next.js with \textbf{client-side routing only}:
+
+\begin{itemize}
+    \item \textbf{No SSR}: Next.js is used purely as a React framework with client-side routing via \inlinecode{next/router}
+    \item \textbf{Static export}: Supports \inlinecode{output: 'export'} in \inlinecode{next.config.js} for air-gapped deployment scenarios
+    \item \textbf{API consumption}: All data comes from the REST API; the UI is a pure client
+    \item \textbf{Authentication}: JWT tokens stored in \inlinecode{httpOnly} cookies or \inlinecode{localStorage}
+    \item \textbf{State management}: React Context or Zustand for client-side state
+    \item \textbf{Build output}: Static HTML/CSS/JS served from the API server or a standalone file server
+\end{itemize}
+
+\textbf{Key Pages:}
+\begin{itemize}
+    \item \textbf{Dashboard}: Overview of indexes, recent searches, system health
+    \item \textbf{Search}: Query interface with filters, pagination, and result display
+    \item \textbf{Indexes}: Create, browse, and manage indexes
+    \item \textbf{Documents}: Browse and inspect individual document chunks
+    \item \textbf{Users}: User administration (admin only)
+    \item \textbf{Settings}: Configuration panel
+    \item \textbf{Analytics}: Search analytics and usage metrics
+\end{itemize}
+\end{reqbox}
+
+\subsection{Analytics and Monitoring}
+
+\subsubsection{FR-ANL-001: Analytics Engine}
+
+\begin{reqbox}[Analytics Specification]
+IsoCortex provides a SQLite-backed analytics engine that tracks system usage and enables data-driven operational decisions.
+
+\textbf{Tracked Metrics:}
+\begin{itemize}
+    \item \textbf{Search queries}: Query text (hashed), result count, latency, index name, timestamp, user ID
+    \item \textbf{Index operations}: Create, update, delete, compact, export, import --- each with duration and status
+    \item \textbf{System health}: Uptime, memory usage, active index count, total vector count, embedding cache hit rate
+    \item \textbf{User activity}: Login/logout events, failed auth attempts, API usage per user
+    \item \textbf{Error rates}: Error counts by code, endpoint, and time window
+\end{itemize}
+
+\textbf{Analytics API Endpoints:}
+\begin{itemize}
+    \item \inlinecode{GET /api/v1/analytics/overview} --- System-wide summary (total searches, indexes, users, uptime)
+    \item \inlinecode{GET /api/v1/analytics/search?from=...&to=...} --- Search analytics with date range filtering
+    \item \inlinecode{GET /api/v1/analytics/indexes} --- Per-index statistics (vector counts, query counts, sizes)
+    \item \inlinecode{GET /api/v1/analytics/health} --- Real-time system health metrics (memory, CPU, cache stats)
+\end{itemize}
+
+\textbf{Retention:}
+\begin{itemize}
+    \item Analytics records retained for a configurable period (default: 90 days)
+    \item Aggregated summaries preserved indefinitely (daily rollups)
+    \item Cleanup runs as a periodic background task (every 24 hours)
+\end{itemize}
+
+\textbf{Privacy:}
+\begin{itemize}
+    \item Query text is SHA-256 hashed before storage (irreversible, privacy-preserving)
+    \item User IDs are stored as UUIDs (no PII)
+    \item IP addresses are not logged
+\end{itemize}
+\end{reqbox}
+
+\subsection{Job Management API}
+
+\subsubsection{FR-API-007: Job and Admin Endpoints}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+GET & \apipath{/api/v1/jobs/\{job\_id\}} & JWT & Get job status, progress, and result \\
+GET & \apipath{/api/v1/jobs/\{job\_id\}/stream} & JWT & SSE stream for real-time progress \\
+GET & \apipath{/api/v1/jobs} & JWT & List all jobs with optional status filter \\
+DELETE & \apipath{/api/v1/jobs/\{job\_id\}} & Admin & Cancel a running job \\
+GET & \apipath{/api/v1/admin/rate-limits} & Admin & View all rate limit statuses \\
+POST & \apipath{/api/v1/admin/rate-limits/reset} & Admin & Reset rate limit for a specific key \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% 6. AUTHENTICATION & USER MANAGEMENT
+%% ========================================================================
+\section{Authentication and User Management}
+
+\subsection{Authentication Overview}
+
+IsoCortex uses \textbf{JWT (JSON Web Token)} based authentication:
+
+\begin{itemize}
+    \item \textbf{Login}: POST \apipath{/api/v1/auth/login} with \inlinecode{username} and \inlinecode{password}
+    \item \textbf{Token}: Returns \inlinecode{access\_token} (JWT, 24-hour expiry) and \inlinecode{refresh\_token} (7-day expiry)
+    \item \textbf{Refresh}: POST \apipath{/api/v1/auth/refresh} with \inlinecode{refresh\_token}
+    \item \textbf{Logout}: POST \apipath{/api/v1/auth/logout} invalidates the refresh token
+    \item \textbf{Authorization}: \inlinecode{Authorization: Bearer <token>} header on all protected endpoints
+\end{itemize}
+
+\subsection{Password Requirements}
+
+\begin{reqbox}[Password Policy]
+\begin{itemize}
+    \item \textbf{Minimum length}: 12 characters
+    \item \textbf{Complexity}: Must include at least one uppercase letter, one lowercase letter, one number, and one special character
+    \item \textbf{Hashing}: bcrypt with cost factor 12 (provides $\sim$250ms hash time on modern hardware)
+    \item \textbf{Storage}: Only the bcrypt hash is stored; plaintext passwords are never persisted
+    \item \textbf{Validation}: Server-side validation on create and password change; client-side hints in UI
+\end{itemize}
+\end{reqbox}
+
+\subsection{Account Lockout Policy}
+
+\begin{itemize}
+    \item \textbf{Failed attempt tracking}: Each username has a counter stored in SQLite
+    \item \textbf{Lockout threshold}: 5 consecutive failed login attempts
+    \item \textbf{Lockout duration}: 15 minutes
+    \item \textbf{Counter reset}: Successful login resets the failed attempt counter
+    \item \textbf{Response}: Locked accounts receive 403 Forbidden with \inlinecode{"detail": "Account locked. Try again in X minutes."}
+    \item \textbf{Admin override}: Admins can manually unlock accounts via the user management API
+\end{itemize}
+
+\subsection{First-Run Setup Wizard}
+
+On initial startup (no users in the database):
+
+\begin{enumerate}
+    \item System detects zero users in the user table
+    \item Setup wizard endpoint becomes available: POST \apipath{/api/v1/auth/setup}
+    \item First user created automatically receives the \inlinecode{admin} role
+    \item Setup wizard is disabled after the first user is created (returns 409 Conflict)
+    \item Admin is prompted to create a strong password meeting all complexity requirements
+\end{enumerate}
+
+\subsection{User Management API}
+
+\begin{reqbox}[User Management Endpoints]
+All user management endpoints require JWT authentication. Administrative operations require the caller to have the \inlinecode{admin} role.
+\end{reqbox}
+
+\begin{longtable}{@{}p{1.5cm}p{4.5cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+POST & \apipath{/api/v1/auth/setup} & None (first run only) & Create initial admin user \\
+POST & \apipath{/api/v1/auth/login} & None & Authenticate and receive tokens \\
+POST & \apipath{/api/v1/auth/refresh} & refresh\_token & Refresh access token \\
+POST & \apipath{/api/v1/auth/logout} & JWT & Invalidate refresh token \\
+POST & \apipath{/api/v1/auth/users} & Admin & Create a new user \\
+GET & \apipath{/api/v1/auth/users} & Admin & List all users \\
+PUT & \apipath{/api/v1/auth/users/\{id\}/password} & JWT (self or admin) & Change user password \\
+PUT & \apipath{/api/v1/auth/users/\{id\}/role} & Admin & Change user role \\
+POST & \apipath{/api/v1/auth/users/\{id\}/unlock} & Admin & Unlock locked account \\
+DELETE & \apipath{/api/v1/auth/users/\{id\}} & Admin & Delete a user \\
+GET & \apipath{/api/v1/auth/me} & JWT & Get current user profile \\
+\bottomrule
+\end{longtable}
+
+\textbf{Create User Request (Admin):}
+\begin{lstlisting}[language=JSON]
+{
+  "username": "analyst1",
+  "password": "SecurePassw0rd!2025",
+  "role": "user",
+  "email": "analyst@company.com"
+}
+\end{lstlisting}
+
+\textbf{User Roles:}
+\begin{longtable}{@{}p{2.5cm}p{10cm}@{}}
+\toprule
+\textbf{Role} & \textbf{Permissions} \\
+\midrule
+\endhead
+admin & Full access: user management, index CRUD, search, analytics, settings, export/import \\
+user & Search, view indexes and documents, export data, change own password \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% 7. INDEX FORMAT VERSIONING
+%% ========================================================================
+\section{Index Format Versioning}
+
+\subsection{Overview}
+
+Index files on disk include a version identifier to enable forward compatibility and safe migration. As IsoCortex evolves, the binary format of index data may change. The versioning system ensures that older indices can be loaded, migrated, or explicitly rejected with clear error messages.
+
+\subsection{Format Version Field}
+
+Every index includes an \inlinecode{index\_info.json} file with a \inlinecode{format\_version} field:
+
+\begin{lstlisting}[language=JSON]
+{
+  "format_version": 1,
+  "name": "my-docs",
+  "created_at": "2025-01-15T10:30:00Z",
+  "updated_at": "2025-01-15T12:00:00Z",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_dimension": 384,
+  "vector_count": 15234,
+  "hnsw_params": {
+    "M": 16,
+    "ef_construction": 200,
+    "metric": "cosine"
+  },
+  "chunk_config": {
+    "chunk_size": 512,
+    "chunk_overlap": 50
+  }
+}
+\end{lstlisting}
+
+\subsection{Version Negotiation}
+
+On index load, the system performs version negotiation:
+
+\begin{enumerate}
+    \item Read \inlinecode{format\_version} from \inlinecode{index\_info.json}
+    \item Compare against the \textbf{current supported version}
+    \item \textbf{Exact match}: Load index normally
+    \item \textbf{Minor version difference}: Auto-migrate (see breaking change policy below)
+    \item \textbf{Major version difference}: Reject with a clear error message
+\end{enumerate}
+
+\begin{lstlisting}[language=Python,title={Version Negotiation Logic}]
+SUPPORTED_VERSION = 1
+
+def load_index(index_path: Path) -> HNSWIndex:
+    info = json.loads((index_path / "index_info.json").read_text())
+    version = info["format_version"]
+
+    if version == SUPPORTED_VERSION:
+        return HNSWIndex.load(index_path)
+
+    if version > SUPPORTED_VERSION:
+        raise IndexVersionError(
+            f"Index format v{version} is newer than supported v{SUPPORTED_VERSION}. "
+            f"Please update IsoCortex to the latest version."
+        )
+
+    # version < SUPPORTED_VERSION
+    migration = MigrationRegistry.get_migration(version, SUPPORTED_VERSION)
+    if migration and migration.automatic:
+        logger.info(f"Auto-migrating index from v{version} to v{SUPPORTED_VERSION}")
+        migration.migrate(index_path)
+        return HNSWIndex.load(index_path)
+    else:
+        raise IndexVersionError(
+            f"Index format v{version} requires manual migration. "
+            f"Run: isocortex index migrate {index_path} --target {SUPPORTED_VERSION}"
+        )
+\end{lstlisting}
+
+\subsection{Migration Registry Pattern}
+
+Migrations are registered in a global migration registry:
+
+\begin{lstlisting}[language=Python,title={Migration Registry}]
+class Migration:
+    def __init__(self, from_version: int, to_version: int,
+                 automatic: bool, description: str):
+        self.from_version = from_version
+        self.to_version = to_version
+        self.automatic = automatic
+        self.description = description
+
+    def migrate(self, index_path: Path) -> None:
+        raise NotImplementedError
+
+class MigrationRegistry:
+    _migrations: list[Migration] = []
+
+    @classmethod
+    def register(cls, migration: Migration) -> None:
+        cls._migrations.append(migration)
+
+    @classmethod
+    def get_migration(cls, from_v: int, to_v: int) -> Migration | None:
+        for m in cls._migrations:
+            if m.from_version == from_v and m.to_version == to_v:
+                return m
+        return None
+
+# Register migrations
+MigrationRegistry.register(Migration(
+    from_version=1, to_version=2, automatic=True,
+    description="Add chunk_overlap metadata field"
+))
+\end{lstlisting}
+
+\subsection{Breaking Change Policy}
+
+\begin{reqbox}[Version Policy]
+\begin{itemize}
+    \item \textbf{Minor versions} (e.g., 1 $\to$ 2): Auto-migrate on load. Changes are backward-compatible additions (new optional fields, metadata additions).
+    \item \textbf{Major versions} (e.g., 1 $\to$ 10): Require manual migration via CLI command. Changes involve incompatible modifications (binary format changes, structural alterations).
+    \item \textbf{Version increments}: Minor for additive changes; major for breaking changes.
+    \item \textbf{Format changelog}: Maintained in Appendix A with detailed change descriptions.
+    \item \textbf{Backup before migration}: The system automatically creates a backup of the index before any migration.
+\end{itemize}
+\end{reqbox}
+
+%% ========================================================================
+%% 8. ASYNC OPERATIONS & LONG-RUNNING TASKS
+%% ========================================================================
+\section{Async Operations and Long-Running Tasks}
+
+\subsection{Overview}
+
+Operations that may take longer than a typical HTTP request timeout (index creation, bulk deletion, export, import, compaction) are executed asynchronously. The client receives an immediate response with a job identifier and can poll for status or subscribe to real-time progress updates.
+
+\subsection{Job Lifecycle}
+
+\begin{enumerate}
+    \item Client submits a long-running operation (e.g., POST \apipath{/api/v1/indexes})
+    \item Server validates the request and creates a job record in SQLite
+    \item Server responds with \textbf{202 Accepted} and a \inlinecode{job\_id} in the response body
+    \item The job is queued for execution by the background job scheduler
+    \item Client polls GET \apipath{/api/v1/jobs/\{job\_id\}} for status updates
+    \item Alternatively, client subscribes to SSE for real-time progress
+    \item On completion, the job result is stored and available for retrieval
+    \item Job records are cleaned up after a configurable retention period (default: 7 days)
+\end{enumerate}
+
+\subsection{Job Status Endpoint}
+
+\begin{endpointbox}[GET /api/v1/jobs/\{job\_id\}]
+\textbf{Response (Running):}
+\begin{lstlisting}[language=JSON]
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "index_create",
+  "status": "running",
+  "progress": {
+    "percentage": 67,
+    "message": "Embedding documents... (1015/1500)",
+    "files_processed": 1015,
+    "files_total": 1500
+  },
+  "created_at": "2025-01-15T10:30:00Z",
+  "started_at": "2025-01-15T10:30:01Z",
+  "estimated_completion": "2025-01-15T10:35:00Z"
+}
+\end{lstlisting}
+
+\textbf{Response (Completed):}
+\begin{lstlisting}[language=JSON]
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "index_create",
+  "status": "completed",
+  "result": {
+    "index_name": "my-docs",
+    "vector_count": 15234,
+    "file_count": 1500,
+    "duration_seconds": 287.5,
+    "index_size_mb": 12.3
+  },
+  "created_at": "2025-01-15T10:30:00Z",
+  "started_at": "2025-01-15T10:30:01Z",
+  "completed_at": "2025-01-15T10:34:48Z"
+}
+\end{lstlisting}
+
+\textbf{Response (Failed):}
+\begin{lstlisting}[language=JSON]
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "index_create",
+  "status": "failed",
+  "error": {
+    "code": 500,
+    "message": "Embedding failed for file 'corrupt.pdf'",
+    "detail": "PyMuPDF error: Cannot open encrypted PDF",
+    "file": "corrupt.pdf",
+    "step": "embedding"
+  },
+  "created_at": "2025-01-15T10:30:00Z",
+  "started_at": "2025-01-15T10:30:01Z",
+  "failed_at": "2025-01-15T10:31:15Z"
+}
+\end{lstlisting}
+\end{endpointbox}
+
+\subsection{SSE Progress Endpoint}
+
+For real-time progress updates, clients can subscribe to a Server-Sent Events (SSE) stream:
+
+\begin{endpointbox}[GET /api/v1/jobs/\{job\_id\}/stream]
+\textbf{Protocol:}
+\begin{itemize}
+    \item Client opens an EventSource connection to the SSE endpoint
+    \item Server sends events as they occur:
+\end{itemize}
+\begin{lstlisting}[language={},title={SSE Event Stream}]
+event: progress
+data: {"percentage": 25, "message": "Parsing files... (375/1500)"}
+
+event: progress
+data: {"percentage": 50, "message": "Embedding documents... (750/1500)"}
+
+event: progress
+data: {"percentage": 75, "message": "Building HNSW index..."}
+
+event: completed
+data: {"vector_count": 15234, "duration_seconds": 287.5}
+
+event: error
+data: {"code": 500, "message": "Embedding failed"}
+\end{lstlisting}
+
+\textbf{Connection Management:}
+\begin{itemize}
+    \item Connection stays open until job completes or client disconnects
+    \item Automatic reconnection: client retries with \inlinecode{Last-Event-ID} header
+    \item Server sends keep-alive comments every 15 seconds to prevent proxy timeouts
+\end{itemize}
+\end{endpointbox}
+
+\subsection{Job Types}
+
+\begin{longtable}{@{}p{3cm}p{5cm}p{5.5cm}@{}}
+\toprule
+\textbf{Job Type} & \textbf{Trigger} & \textbf{Result Fields} \\
+\midrule
+\endhead
+\inlinecode{index\_create} & POST \apipath{/api/v1/indexes} & index\_name, vector\_count, file\_count, duration\_seconds, index\_size\_mb \\
+\inlinecode{index\_update} & POST \apipath{/api/v1/indexes/\{name\}/documents} & vectors\_added, duration\_seconds \\
+\inlinecode{index\_delete} & DELETE \apipath{/api/v1/indexes/\{name\}} & vectors\_removed, disk\_freed\_mb, duration\_seconds \\
+\inlinecode{index\_compact} & Auto-triggered or manual & vectors\_before, vectors\_after, duration\_seconds, memory\_saved\_mb \\
+\inlinecode{export} & POST \apipath{/api/v1/indexes/\{name\}/export} & archive\_path, archive\_size\_mb, duration\_seconds \\
+\inlinecode{import} & POST \apipath{/api/v1/indexes/import} & index\_name, vector\_count, duration\_seconds \\
+\bottomrule
+\end{longtable}
+
+\subsection{Job Cleanup}
+
+\begin{itemize}
+    \item Completed and failed job records are retained for a configurable period (default: 7 days)
+    \item Cleanup runs as a periodic background task (every 24 hours)
+    \item Admin can configure retention via \inlinecode{jobs.retention\_days}
+    \item Export archive files are NOT auto-deleted (managed separately by the user)
+    \item Job cleanup is idempotent and safe to run manually via CLI: \inlinecode{isocortex jobs cleanup}
+\end{itemize}
+
+%% ========================================================================
+%% 9. NON-FUNCTIONAL REQUIREMENTS
+%% ========================================================================
+\section{Non-Functional Requirements}
+
+\subsection{Performance Requirements}
+
+\begin{reqbox}[NFR-01: Search Latency]
+\begin{itemize}
+    \item \textbf{p95 search latency}: $<$ 100ms for indices up to 1M vectors on modern hardware
+    \item \textbf{p99 search latency}: $<$ 500ms for indices up to 1M vectors
+    \item Measured end-to-end including embedding generation and HNSW traversal
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-02: Indexing Throughput]
+\begin{itemize}
+    \item \textbf{Embedding throughput}: $\geq$ 500 documents/minute on a 4-core CPU
+    \item \textbf{HNSW construction}: $\leq$ 5 minutes for 100K vectors
+    \item Includes file parsing, chunking, embedding, and graph construction
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-03: API Response Time]
+\begin{itemize}
+    \item Non-search API endpoints: $<$ 200ms p95
+    \item Health check endpoint: $<$ 50ms
+    \item Static asset serving (Web UI): $<$ 100ms
+\end{itemize}
+\end{reqbox}
+
+\subsection{Scalability Requirements}
+
+\begin{reqbox}[NFR-04: Index Size]
+\begin{itemize}
+    \item Support up to 10M vectors per index (memory limited)
+    \item Multi-index: no hard limit on number of indices (limited by disk)
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-05: Concurrent Request Handling]
+\begin{itemize}
+    \item Support 10+ concurrent API requests without performance degradation
+    \item Search throughput: $\geq$ 100 queries/second under concurrent load
+    \item No deadlocks or race conditions under high concurrency
+    \item Graceful degradation under extreme load (queue-based backpressure)
+\end{itemize}
+\end{reqbox}
+
+\subsection{Memory Requirements}
+
+\begin{reqbox}[NFR-06: Memory Efficiency]
+IsoCortex must operate within configurable memory limits. This section defines memory requirements and the \inlinecode{max\_memory\_mb} parameter.
+
+\textbf{Vector Memory Table (float32, 384 dimensions):}
+\begin{center}
+\begin{tabular}{@{}rcccc@{}}
+\toprule
+\textbf{Vectors} & \textbf{Raw Vectors} & \textbf{HNSW Overhead (3x)} & \textbf{Total Estimate} & \textbf{Min System RAM} \\
+\midrule
+10K & 15 MB & 45 MB & 60 MB & 2 GB \\
+100K & 147 MB & 441 MB & 588 MB & 4 GB \\
+1M & 1.47 GB & 4.41 GB & 5.88 GB & 8 GB \\
+10M & 14.7 GB & 44.1 GB & 58.8 GB & 64 GB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Notes:}
+\begin{itemize}
+    \item Raw vector size = count $\times$ dimensions $\times$ 4 bytes (float32)
+    \item HNSW graph overhead is approximately 2--4x the vector size (depends on $M$ parameter)
+    \item Total includes metadata, embedding cache, and Python runtime overhead ($\sim$200 MB)
+    \item \textbf{Pre-indexing memory check}: Before index creation, the system estimates required memory and warns if it exceeds \inlinecode{max\_memory\_mb}
+    \item If estimated memory exceeds 80\% of available system RAM, a WARNING is logged and returned to the client
+    \item If estimated memory exceeds \inlinecode{max\_memory\_mb}, the operation is rejected with a clear error
+\end{itemize}
+
+\textbf{Configuration:}
+\begin{itemize}
+    \item \inlinecode{max\_memory\_mb}: Hard limit on total memory usage (default: 80\% of system RAM)
+    \item \inlinecode{memory.warning\_threshold}: Fraction of max\_memory\_mb at which warnings trigger (default: 0.8)
+    \item \inlinecode{embedding.cache\_size}: Number of cached embeddings (default: 1000)
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[Minimum System Requirements]
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Resource} & \textbf{Minimum} & \textbf{Recommended} \\
+\midrule
+CPU & 2 cores (x86\_64) & 4+ cores (x86\_64, AVX2 support) \\
+RAM & 4 GB & 8+ GB \\
+Disk (installation) & 1 GB & 2 GB \\
+Disk (per 100K vectors) & 1 GB & 2 GB (with headroom) \\
+OS & Linux, macOS, Windows 10+ & Ubuntu 22.04 LTS or equivalent \\
+Python & 3.10+ & 3.11+ \\
+Docker (optional) & 20.10+ & 24.0+ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{reqbox}
+
+\subsection{Security Requirements}
+
+\begin{reqbox}[NFR-07: Authentication]
+\begin{itemize}
+    \item All API endpoints require JWT authentication (except login and first-run setup)
+    \item Token expiry: 24 hours (access), 7 days (refresh)
+    \item Tokens are cryptographically signed (HS256) with a server-secret key
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-08: Password Security]
+\begin{itemize}
+    \item bcrypt hashing with cost factor 12
+    \item Minimum 12 characters with complexity requirements
+    \item Account lockout after 5 failed attempts (15-minute window)
+    \item Passwords never logged or exposed in error messages
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-09: Rate Limiting]
+\begin{itemize}
+    \item SQLite-backed sliding window rate limiting
+    \item Default: 100 requests per minute per API key
+    \item Search-specific: 60 searches per minute
+    \item Admin-adjustable per key and per endpoint
+    \item Persists across server restarts
+    \item Works correctly across multiple Uvicorn workers
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-10: Input Validation]
+\begin{itemize}
+    \item All user inputs validated via Pydantic models (type checking + constraints)
+    \item SQL injection prevented via parameterized queries
+    \item Path traversal prevented via canonical path validation
+    \item File upload size limited and type-validated
+\end{itemize}
+\end{reqbox}
+
+\subsection{Reliability Requirements}
+
+\begin{reqbox}[NFR-11: Data Integrity]
+\begin{itemize}
+    \item Atomic index creation: either all vectors are indexed or none
+    \item SQLite ACID compliance for all metadata operations
+    \item SHA-256 checksums on exported archives for integrity verification
+    \item Automatic index validation on load (check vectors.bin size against metadata)
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-12: Graceful Shutdown]
+\begin{itemize}
+    \item SIGTERM/SIGINT triggers graceful shutdown
+    \item In-progress jobs are checkpointed and resumable
+    \item SQLite WAL checkpoint on shutdown
+    \item No data loss on crash during normal operation
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-13: Graceful Degradation]
+\begin{itemize}
+    \item \textbf{OOM handling}: If system runs out of memory during indexing, the operation is paused, an error is logged with a request\_id, and a clear message is returned to the client
+    \item \textbf{Partial results}: If batch search encounters a timeout on some queries, completed results are returned with error details for failed queries (207 Multi-Status)
+    \item \textbf{Fallback behavior}: If the embedding cache cannot allocate memory, it is cleared and processing continues without caching
+    \item \textbf{Circuit breaker}: If repeated failures occur on a specific index, it is temporarily marked unhealthy and searches are rejected with 503 until an admin intervenes
+\end{itemize}
+\end{reqbox}
+
+\subsection{Usability Requirements}
+
+\begin{reqbox}[NFR-14: CLI Usability]
+\begin{itemize}
+    \item All commands include \inlinecode{--help} with examples
+    \item Human-readable output by default; \inlinecode{--json} flag for machine output
+    \item Color-coded output (auto-disabled in non-TTY environments)
+    \item Progress bars for long-running operations
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-15: API Documentation]
+\begin{itemize}
+    \item Auto-generated OpenAPI 3.0 documentation via FastAPI
+    \item Interactive Swagger UI at \apipath{/docs}
+    \item ReDoc at \apipath{/redoc}
+    \item All endpoints documented with request/response examples
+\end{itemize}
+\end{reqbox}
+
+\begin{reqbox}[NFR-16: Web UI Responsiveness]
+\begin{itemize}
+    \item Responsive design supporting desktop, tablet, and mobile viewports
+    \item Page load time: $<$ 2 seconds on broadband
+    \item Search results displayed within 500ms of query submission
+\end{itemize}
+\end{reqbox}
+
+\subsection{Embedding Cache Requirements}
+
+\begin{reqbox}[NFR-17: Embedding Cache Hit Rate]
+\begin{itemize}
+    \item Target cache hit rate: $>$ 80\% for repeated queries within a session
+    \item Cache hit rate is logged periodically (every 1000 queries)
+    \item Cache metrics exposed via the analytics endpoint: hits, misses, hit\_rate, eviction\_count
+    \item Cache performance should not degrade overall search latency (cache lookup $<$ 1ms)
+\end{itemize}
+\end{reqbox}
+
+\subsection{Portability Requirements}
+
+\begin{reqbox}[NFR-18: Cross-Platform]
+\begin{itemize}
+    \item Runs on Linux (Ubuntu 20.04+), macOS (12+), Windows 10+
+    \item Docker images available for all major platforms (linux/amd64, linux/arm64)
+    \item No platform-specific code in core modules
+    \item File paths handled via \inlinecode{pathlib.Path} for cross-platform compatibility
+\end{itemize}
+\end{reqbox}
+
+%% ========================================================================
+%% 10. ERROR HANDLING SPECIFICATION
+%% ========================================================================
+\section{Error Handling Specification}
+
+\subsection{Standard Error Format}
+
+All API errors follow a consistent envelope format:
+
+\begin{lstlisting}[language=JSON,title={Standard Error Response}]
+{
+  "error": "Index not found",
+  "code": 404,
+  "detail": "No index named 'nonexistent' exists in this instance.",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+\end{lstlisting}
+
+\textbf{Fields:}
+\begin{itemize}
+    \item \inlinecode{error} (string): Human-readable error summary
+    \item \inlinecode{code} (integer): HTTP status code for programmatic handling
+    \item \inlinecode{detail} (string): Detailed explanation with context-specific information
+    \item \inlinecode{request\_id} (string): Unique identifier for debugging and log correlation
+\end{itemize}
+
+\subsection{Request ID Generation}
+
+\begin{itemize}
+    \item Every incoming request receives a unique UUID v4 as its \inlinecode{request\_id}
+    \item Generated in middleware before route handling
+    \item Included in response headers (\inlinecode{X-Request-ID})
+    \item Included in all log entries for that request
+    \item Propagated to background jobs spawned by the request
+    \item Enables end-to-end request tracing across async boundaries
+\end{itemize}
+
+\subsection{Error Codes Reference}
+
+\begin{longtable}{@{}p{1cm}p{1.5cm}p{4cm}p{7cm}@{}}
+\toprule
+\textbf{Code} & \textbf{Status} & \textbf{Error} & \textbf{When Used} \\
+\midrule
+\endhead
+400 & Bad Request & \texttt{BAD\_REQUEST} & Invalid request body, missing required fields, validation errors \\
+401 & Unauthorized & \texttt{UNAUTHORIZED} & Missing or invalid JWT token, expired token \\
+403 & Forbidden & \texttt{FORBIDDEN} & Insufficient permissions (non-admin accessing admin endpoints), locked account \\
+404 & Not Found & \texttt{NOT\_FOUND} & Index, document, user, or job not found \\
+409 & Conflict & \texttt{CONFLICT} & Duplicate index name, setup already completed, version conflict \\
+422 & Unprocessable & \texttt{VALIDATION\_ERROR} & Pydantic validation failure (detailed field errors) \\
+429 & Rate Limited & \texttt{RATE\_LIMITED} & Request rate exceeded; includes \texttt{retry\_after} field \\
+500 & Internal Error & \texttt{INTERNAL\_ERROR} & Unexpected server error (logged with full traceback) \\
+503 & Unavailable & \texttt{SERVICE\_UNAVAILABLE} & Server overloaded, embedder queue full, index marked unhealthy \\
+\bottomrule
+\end{longtable}
+
+\subsection{Structured Error Logging}
+
+\begin{lstlisting}[language=JSON,title={Structured Log Entry (JSON output mode)}]
+{
+  "timestamp": "2025-01-15T10:30:15.123Z",
+  "level": "ERROR",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "method": "POST",
+  "path": "/api/v1/indexes/my-docs/search",
+  "status": 500,
+  "error": "INTERNAL_ERROR",
+  "message": "HNSW search failed: memory allocation error",
+  "duration_ms": 45,
+  "user_id": "user-uuid",
+  "index_name": "my-docs",
+  "stack_trace": "Traceback (most recent call last)..."
+}
+\end{lstlisting}
+
+\begin{itemize}
+    \item All errors logged with structured JSON format (in production)
+    \item \inlinecode{request\_id} enables correlation between HTTP response and server logs
+    \item Stack traces included only at ERROR level (not exposed to clients)
+    \item Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    \item Configurable via \inlinecode{LOG\_LEVEL} environment variable
+\end{itemize}
+
+%% ========================================================================
+%% 11. RATE LIMITING
+%% ========================================================================
+\section{Rate Limiting}
+
+\subsection{SQLite-Backed Sliding Window}
+
+IsoCortex implements rate limiting using \textbf{sliding window counters stored in SQLite}, providing persistence across restarts and correct behavior across multiple Uvicorn workers.
+
+\begin{reqbox}[Rate Limiting Design]
+\textbf{Mechanism:}
+\begin{itemize}
+    \item Each request increments a counter in a SQLite table keyed by (API key, endpoint, time window)
+    \item Sliding window: counts are aggregated over the last 60 seconds
+    \item Query: \inlinecode{SELECT COUNT(*) FROM rate\_limits WHERE key = ? AND endpoint = ? AND timestamp > datetime('now', '-60 seconds')}
+    \item SQLite WAL mode ensures non-blocking concurrent access
+\end{itemize}
+
+\textbf{Advantages over in-memory:}
+\begin{itemize}
+    \item \cmark{} Persists across server restarts (no reset on deployment)
+    \item \cmark{} Shared across multiple Uvicorn workers (single source of truth)
+    \item \cmark{} No memory overhead for counters
+    \item \cmark{} Auditable: admins can inspect rate limit history
+\end{itemize}
+
+\textbf{Response Headers:}
+\begin{itemize}
+    \item \inlinecode{X-RateLimit-Limit}: Maximum requests per window
+    \item \inlinecode{X-RateLimit-Remaining}: Remaining requests in current window
+    \item \inlinecode{X-RateLimit-Reset}: Unix timestamp when the window resets
+    \item \inlinecode{Retry-After}: Seconds until the client can retry (on 429 responses)
+\end{itemize}
+\end{reqbox}
+
+\subsection{Admin Rate Limit Management}
+
+\begin{endpointbox}[GET /api/v1/admin/rate-limits]
+\textbf{Description:} View current rate limit status for all API keys and endpoints.
+
+\textbf{Response:}
+\begin{lstlisting}[language=JSON]
+{
+  "limits": [
+    {
+      "key": "user-uuid-1",
+      "endpoint": "*",
+      "limit": 100,
+      "remaining": 67,
+      "reset_at": "2025-01-15T10:31:00Z"
+    },
+    {
+      "key": "user-uuid-1",
+      "endpoint": "/api/v1/indexes/*/search",
+      "limit": 60,
+      "remaining": 45,
+      "reset_at": "2025-01-15T10:31:00Z"
+    }
+  ]
+}
+\end{lstlisting}
+\end{endpointbox}
+
+\subsection{Configuration}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Scope} & \textbf{Description} \\
+\midrule
+\inlinecode{rate\_limit.default} & 100/min & Global & Default requests per minute \\
+\inlinecode{rate\_limit.search} & 60/min & Search endpoints & Search-specific limit \\
+\inlinecode{rate\_limit.write} & 30/min & Write endpoints & Index/document mutation limit \\
+\inlinecode{rate\_limit.burst} & 20 & Global & Burst allowance (first N requests instant) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ========================================================================
+%% 12. KNOWN LIMITATIONS
+%% ========================================================================
+\section{Known Limitations}
+
+The following limitations are acknowledged for IsoCortex v1.0 and may be addressed in future releases:
+
+\begin{warningbox}[Production Limitations]
+\begin{enumerate}
+    \item \textbf{HNSW deletion requires compaction} \\
+    Vectors are soft-deleted (tombstoned) and not instantly removed from the graph. Periodic compaction is needed to reclaim memory and restore full search precision. Compaction rebuilds the graph and temporarily consumes additional memory.
+
+    \item \textbf{Single-node only} \\
+    No distributed search across multiple machines. All indices and computations reside on a single server. For larger scale, users would need to shard indices manually across separate IsoCortex instances.
+
+    \item \textbf{Embedding model fixed at index creation} \\
+    The embedding model used to create an index is locked for that index's lifetime. Changing the embedding model requires creating a new index and re-indexing all documents. There is no automatic re-embedding capability.
+
+    \item \textbf{Maximum practical index size: $\sim$10M vectors} \\
+    This is a memory-limited constraint. At 384 dimensions with HNSW overhead, 10M vectors require $\sim$59 GB RAM. Larger indices may cause out-of-memory errors. The \inlinecode{max\_memory\_mb} configuration provides a safety mechanism.
+
+    \item \textbf{No GPU acceleration in v1.0} \\
+    All embedding inference runs on CPU (including SIMD optimizations). GPU support is planned for a future release but is not included in the initial version.
+
+    \item \textbf{No real-time streaming index updates} \\
+    Index updates are processed in batches, not streamed. Adding documents triggers the full embedding + indexing pipeline. There is no continuous ingestion mode for real-time data feeds.
+
+    \item \textbf{SQLite limitations for high-write workloads} \\
+    SQLite handles concurrent reads well (WAL mode) but serializes writes. For write-heavy workloads (e.g., thousands of index updates per second), SQLite may become a bottleneck.
+
+    \item \textbf{Single embedding model at runtime} \\
+    Only one embedding model can be active at a time across all indices. If different indices require different models, this requires stopping the server, changing the configuration, and restarting.
+\end{enumerate}
+\end{warningbox}
+
+%% ========================================================================
+%% 13. DEVELOPMENT PHASES
+%% ========================================================================
+\section{Development Phases}
+
+Development is organized into logical phases representing progressive capability delivery. Each phase builds upon the previous and delivers a usable subset of functionality.
+
+\begin{reqbox}[Phase Overview]
+\begin{longtable}{@{}p{2.5cm}p{3.5cm}p{8.5cm}@{}}
+\toprule
+\textbf{Phase} & \textbf{Focus Area} & \textbf{Key Deliverables} \\
+\midrule
+\endhead
+Phase 1 & Core Engine &
+\begin{itemize}[nosep]
+    \item File extraction pipeline (7 formats)
+    \item Text chunking with overlap
+    \item MiniLM embedding provider with download + cache
+    \item HNSW index construction and search
+    \item EmbeddingProvider ABC and registry
+    \item FileExtractor ABC and registry
+    \item Index serialization to disk (vectors.bin, metadata.json, hnsw\_index.bin)
+    \item Index format versioning system
+    \item Soft-delete with compaction
+    \item ReadWriteLock for HNSW
+    \item Embedding queue + LRU cache
+\end{itemize} \\
+\midrule
+Phase 2 & Interface Layer &
+\begin{itemize}[nosep]
+    \item FastAPI application setup
+    \item REST API: index CRUD, search, documents, batch search
+    \item Pagination (offset + cursor-based)
+    \item Standard error format with request\_id
+    \item CLI (Typer): index, search, serve commands
+    \item OpenAPI documentation
+\end{itemize} \\
+\midrule
+Phase 3 & Platform Features &
+\begin{itemize}[nosep]
+    \item Web UI (Next.js SPA)
+    \item Multi-index management
+    \item Incremental index updates
+    \item Export/Import (.isocortex archives)
+    \item Async job system (202 Accepted + polling + SSE)
+    \item Analytics engine (search logging, usage metrics)
+\end{itemize} \\
+\midrule
+Phase 4 & Enterprise Features &
+\begin{itemize}[nosep]
+    \item JWT authentication
+    \item User management (CRUD, roles, lockout)
+    \item First-run setup wizard
+    \item SQLite-backed rate limiting
+    \item Admin API endpoints
+    \item Per-key rate limit configuration
+\end{itemize} \\
+\midrule
+Phase 5 & Deployment \& Polish &
+\begin{itemize}[nosep]
+    \item Docker multi-stage build (API + Web images)
+    \item Docker Compose configuration
+    \item CI/CD pipeline (GitHub Actions)
+    \item Memory requirements system (pre-check, warnings)
+    \item Comprehensive test suite
+    \item Documentation (user guide, API reference)
+    \item Performance benchmarking
+    \item Error handling hardening
+\end{itemize} \\
+\bottomrule
+\end{longtable}
+\end{reqbox}
+
+%% ========================================================================
+%% 14. DEPLOYMENT
+%% ========================================================================
+\section{Deployment}
+
+\subsection{Docker Images}
+
+IsoCortex provides two optimized Docker images built with multi-stage builds:
+
+\begin{reqbox}[Docker Image Strategy]
+\textbf{Image Split:}
+\begin{itemize}
+    \item \inlinecode{isocortex-api}: Full API server with embedding model ($<$ 2.5 GB)
+    \item \inlinecode{isocortex-web}: Frontend-only SPA ($<$ 500 MB)
+\end{itemize}
+
+\textbf{Optimizations:}
+\begin{itemize}
+    \item PyTorch CPU-only: \inlinecode{pip install torch --index-url https://download.pytorch.org/whl/cpu}
+    \item Multi-stage build: separate C++ builder stage (compiles native extensions) and Python runtime stage
+    \item \inlinecode{.dockerignore} excludes: \inlinecode{.git, tests, docs, *.pyc, \textasciitilde{}, node\_modules, .env}
+    \item Layer caching: model download in its own layer (changes only when model version changes)
+    \item Base image: \inlinecode{python:3.11-slim} for minimal footprint
+\end{itemize}
+
+\textbf{Multi-Stage Dockerfile:}
+\end{reqbox}
+
+\begin{lstlisting}[language={},title={Dockerfile (Simplified)}]
+# Stage 1: Builder
+FROM python:3.11-slim AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc g++
+COPY pyproject.toml .
+RUN pip install --no-cache-dir torch --index-url \
+    https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir .
+
+# Stage 2: Runtime
+FROM python:3.11-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 tesseract-ocr && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY src/ /app/src/
+COPY cli/ /app/cli/
+WORKDIR /app
+EXPOSE 8000
+CMD ["uvicorn", "isocortex.api:app", "--host", "0.0.0.0", "--port", "8000"]
+\end{lstlisting}
+
+\subsection{Docker Compose}
+
+\begin{lstlisting}[language={},title={docker-compose.yml}]
+version: "3.9"
+services:
+  api:
+    image: isocortex-api:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - isocortex-data:/app/data
+      - isocortex-models:/root/.isocortex/models
+    environment:
+      - ISOCORTEX_MAX_MEMORY_MB=4096
+      - ISOCORTEX_LOG_LEVEL=INFO
+      - ISOCORTEX_SECRET_KEY=${SECRET_KEY}
+    restart: unless-stopped
+
+  web:
+    image: isocortex-web:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
+    restart: unless-stopped
+
+volumes:
+  isocortex-data:
+  isocortex-models:
+\end{lstlisting}
+
+\subsection{Environment Variables}
+
+\begin{center}
+\begin{tabular}{@{}p{4.5cm}p{2cm}p{1.5cm}p{6cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Default} & \textbf{Required} & \textbf{Description} \\
+\midrule
+\inlinecode{ISOCORTEX\_HOST} & 0.0.0.0 & No & API bind address \\
+\inlinecode{ISOCORTEX\_PORT} & 8000 & No & API port \\
+\inlinecode{ISOCORTEX\_WORKERS} & 1 & No & Uvicorn worker count \\
+\inlinecode{ISOCORTEX\_SECRET\_KEY} & --- & Yes & JWT signing key (auto-generated on first run if not set) \\
+\inlinecode{ISOCORTEX\_MAX\_MEMORY\_MB} & Auto & No & Maximum memory limit in MB \\
+\inlinecode{ISOCORTEX\_LOG\_LEVEL} & INFO & No & Logging level \\
+\inlinecode{ISOCORTEX\_DATA\_DIR} & ./data & No & Data directory path \\
+\inlinecode{ISOCORTEX\_MODEL\_DIR} & \textasciitilde{}/.isocortex/models & No & Model cache directory \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ========================================================================
+%% 15. MONETIZATION AND COMMERCIAL DEPLOYMENT
+%% ========================================================================
+\section{Monetization and Commercial Deployment}
+
+\subsection{Pricing Tiers}
+
+IsoCortex follows a feature-gated, self-hosted licensing model. Customers deploy IsoCortex on their own infrastructure; pricing is based on feature access, support level, and usage capacity rather than per-query billing. This eliminates data sovereignty concerns while enabling predictable costs.
+
+\begin{reqbox}[Pricing Tier Specification]
+\begin{center}
+\begin{tabular}{@{}p{2.5cm}p{3.5cm}p{3.5cm}p{4.5cm}@{}}
+\toprule
+\textbf{Feature} & \textbf{Community} & \textbf{Professional} & \textbf{Enterprise} \\
+\midrule
+\textbf{Price} & Free & \$49/month or \$490/year & Custom \\
+\textbf{Max Vectors/Index} & 100K & 1M & 10M+ \\
+\textbf{Max Indexes} & 3 & Unlimited & Unlimited \\
+\textbf{Users} & 2 & 10 & Unlimited \\
+\textbf{Embedding Models} & MiniLM only & MiniLM + custom & Multi-model runtime \\
+\textbf{Search API} & \cmark{} & \cmark{} & \cmark{} \\
+\textbf{Batch Search} & \cmark{} (max 10) & \cmark{} (max 50) & \cmark{} (max 200) \\
+\textbf{Rate Limits} & 30/min & 100/min & Custom \\
+\textbf{Analytics} & Basic & Full & Full + audit log \\
+\textbf{Export/Import} & \cmark{} & \cmark{} & \cmark{} \\
+\textbf{Custom Extractors} & \xmark{} & \cmark{} & \cmark{} \\
+\textbf{SSO/SAML} & \xmark{} & \xmark{} & \cmark{} \\
+\textbf{API Keys (per user)} & 1 & 5 & Unlimited \\
+\textbf{GPU Acceleration} & \xmark{} & \xmark{} & \cmark{} \\
+\textbf{SLA Support} & Community forum & Email (24h response) & Dedicated (4h response) \\
+\textbf{Multi-Tenancy} & \xmark{} & \xmark{} & \cmark{} \\
+\textbf{FIPS Compliance} & \xmark{} & \xmark{} & \cmark{} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{reqbox}
+
+\textbf{Tier Enforcement Mechanism:}
+\begin{itemize}
+    \item Tier is determined by a signed license key stored in \inlinecode{\textasciitilde/.isocortex/license.key}
+    \item License key contains: tier identifier, vector cap, user cap, feature flags, expiry date, and an HMAC-SHA256 signature
+    \item The API server validates the license on startup and enforces limits at the service layer
+    \item Exceeded limits return \texttt{429 PAYLOAD\_TOO\_LARGE} (vectors) or \texttt{403 FEATURE\_LOCKED} (features)
+    \item Community tier is activated by default when no license key is present
+    \item License keys can be rotated via the admin API without downtime
+\end{itemize}
+
+\textbf{License Key Format:}
+\begin{lstlisting}[language=JSON]
+{
+  "tier": "professional",
+  "max_vectors_per_index": 1000000,
+  "max_indexes": 0,
+  "max_users": 10,
+  "max_batch_queries": 50,
+  "features": ["custom_extractors", "full_analytics"],
+  "issued_at": "2025-01-15T00:00:00Z",
+  "expires_at": "2026-01-15T00:00:00Z",
+  "customer_id": "cust_abc123",
+  "signature": "hmac-sha256-hex..."
+}
+\end{lstlisting}
+
+\subsection{Multi-Tenancy Architecture}
+
+Enterprise deployments require tenant isolation to serve multiple organizations or departments from a single IsoCortex instance. The multi-tenancy model provides logical isolation without the overhead of separate processes or containers.
+
+\begin{reqbox}[Multi-Tenancy Design]
+\textbf{Tenant Isolation Model:}
+\begin{itemize}
+    \item \textbf{Tenant ID}: Each tenant is identified by a UUID (e.g., \inlinecode{tenant\_1234abcd}) stored in the JWT claims
+    \item \textbf{Data isolation}: Each tenant's indices are stored in separate directories under \inlinecode{\textasciitilde/.isocortex/tenants/\{tenant\_id\}/}
+    \item \textbf{User scoping}: Users belong to exactly one tenant; all API operations are scoped to the caller's tenant
+    \item \textbf{No cross-tenant access}: A user from Tenant A cannot query, list, or modify indices belonging to Tenant B
+    \item \textbf{Shared infrastructure}: Embedding model cache, job scheduler, and rate limiter are shared across tenants (resource pool)
+\end{itemize}
+
+\textbf{Tenant Management (Enterprise Admin Only):}
+\begin{itemize}
+    \item \inlinecode{POST /api/v1/admin/tenants} --- Create a new tenant (name, description, tier override)
+    \item \inlinecode{GET /api/v1/admin/tenants} --- List all tenants with usage summaries
+    \item \inlinecode{GET /api/v1/admin/tenants/\{tenant\_id\}} --- Get tenant details and resource usage
+    \item \inlinecode{PUT /api/v1/admin/tenants/\{tenant\_id\}} --- Update tenant configuration
+    \item \inlinecode{DELETE /api/v1/admin/tenants/\{tenant\_id\}} --- Archive and soft-delete a tenant
+\end{itemize}
+
+\textbf{Per-Tenant Resource Limits:}
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Resource} & \textbf{Default per Tenant} & \textbf{Configurable} \\
+\midrule
+Max vectors (across all indexes) & 1M & Yes \\
+Max indexes & 50 & Yes \\
+Max users & 25 & Yes \\
+Max storage (disk) & 10 GB & Yes \\
+Search rate limit & 100/min & Yes \\
+Embedding queue priority & Normal & Yes \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{reqbox}
+
+\textbf{JWT Claims Extension for Multi-Tenancy:}
+\begin{lstlisting}[language=JSON]
+{
+  "sub": "user-uuid",
+  "role": "user",
+  "tenant_id": "tenant_1234abcd",
+  "tenant_name": "Acme Corp",
+  "tier": "enterprise",
+  "exp": 1735689600
+}
+\end{lstlisting}
+
+\subsection{Billing Infrastructure}
+
+IsoCortex uses a usage-metered, subscription-based billing model. Billing data is collected locally and reported to the licensing server for invoicing. No customer data leaves the customer's infrastructure --- only aggregate usage counters are transmitted.
+
+\begin{reqbox}[Billing Architecture]
+\textbf{Usage Meters (collected locally):}
+\begin{itemize}
+    \item \textbf{Total vectors indexed}: Cumulative count of vectors across all tenant indexes
+    \item \textbf{Search queries executed}: Count of all search API calls (single + batch, counted per query)
+    \item \textbf{Active users}: Number of unique users who made at least one API call in the billing period
+    \item \textbf{Peak concurrent users}: Maximum simultaneous API connections observed
+    \item \textbf{Storage consumed}: Total disk usage for indices, metadata, and analytics (in GB)
+    \item \textbf{Uptime percentage}: Fraction of time the API server was reachable (5-minute intervals)
+\end{itemize}
+
+\textbf{Billing Cycle:}
+\begin{itemize}
+    \item Monthly billing cycle aligned with the license activation date
+    \item Usage report generated automatically on the last day of each cycle
+    \item Report uploaded to the licensing server via \inlinecode{POST /api/v1/usage/report} (authenticated)
+    \item Offline mode: If the server cannot reach the licensing server, usage is cached locally and retried with exponential backoff (max 7 days)
+    \item Grace period: 14 days after invoice due date before tier is downgraded to Community
+\end{itemize}
+
+\textbf{Usage Report Format:}
+\begin{lstlisting}[language=JSON]
+{
+  "customer_id": "cust_abc123",
+  "license_key": "lic_...",
+  "billing_period": {
+    "from": "2025-01-01T00:00:00Z",
+    "to": "2025-01-31T23:59:59Z"
+  },
+  "usage": {
+    "total_vectors_indexed": 452000,
+    "search_queries_executed": 128450,
+    "active_users": 8,
+    "peak_concurrent_users": 3,
+    "storage_consumed_gb": 4.7,
+    "uptime_percentage": 99.97
+  },
+  "signature": "hmac-sha256-hex..."
+}
+\end{lstlisting}
+
+\textbf{Admin Usage Dashboard:}
+\begin{itemize}
+    \item \inlinecode{GET /api/v1/admin/usage/current} --- Current billing period usage with projections
+    \item \inlinecode{GET /api/v1/admin/usage/history?months=6} --- Historical usage for trend analysis
+    \item \inlinecode{GET /api/v1/admin/usage/export?format=csv} --- Export usage data for external tools
+    \item \inlinecode{POST /api/v1/admin/usage/report} --- Manually trigger usage report upload
+\end{itemize}
+\end{reqbox}
+
+\subsection{Compliance and Regulatory Requirements}
+
+Enterprise customers in regulated industries (healthcare, finance, government) require documented compliance with security and privacy standards. IsoCortex's self-hosted architecture provides a strong foundation, and the following compliance measures are specified.
+
+\begin{reqbox}[Compliance Specification]
+\textbf{SOC 2 Type II Readiness:}
+\begin{itemize}
+    \item \textbf{Access control}: Role-based access with audit logging (all admin actions logged with user ID, timestamp, and action details)
+    \item \textbf{Data encryption}: TLS 1.3 for all API communication (configurable via \inlinecode{ssl.cert} and \inlinecode{ssl.key}); at-rest encryption of index files via OS-level full-disk encryption (documented as customer responsibility)
+    \item \textbf{Change management}: All configuration changes logged; schema migrations versioned and reversible
+    \item \textbf{Incident response}: Error codes and request IDs enable log-based incident investigation; structured JSON logging for SIEM integration
+    \item \textbf{Data retention}: Configurable retention policies for analytics (default: 90 days), job records (default: 7 days), and audit logs (default: 1 year)
+\end{itemize}
+
+\textbf{GDPR Considerations:}
+\begin{itemize}
+    \item \textbf{Data minimization}: Query text is SHA-256 hashed before analytics storage (irreversible); no IP addresses logged; user IDs are UUIDs (no PII)
+    \item \textbf{Right to erasure}: \inlinecode{DELETE /api/v1/auth/users/\{id\}} cascades to remove all user data including analytics records, audit logs, and personal configuration
+    \item \textbf{Data portability}: Full index export (\inlinecode{POST /api/v1/indexes/\{name\}/export}) enables data portability in open format
+    \item \textbf{Self-hosted advantage}: Customer retains full control over data residency; no data is transmitted to external services except aggregate, anonymized usage counters for billing
+\end{itemize}
+
+\textbf{HIPAA Considerations (Enterprise Tier):}
+\begin{itemize}
+    \item \textbf{BAA requirement}: Business Associate Agreement offered as part of Enterprise tier onboarding
+    \item \textbf{Audit logging}: Comprehensive audit trail of all data access events (who accessed which index, when, and how many results)
+    \item \textbf{Access controls}: Integration with external identity providers (SAML 2.0 / OIDC) for centralized user management
+    \item \textbf{Encryption}: AES-256 at-rest encryption for index files via optional transparent encryption layer (FIPS 140-2 validated module in Enterprise tier)
+    \item \textbf{Disposal}: Index deletion securely overwrites vector and metadata files before removal (3-pass overwrite)
+\end{itemize}
+
+\textbf{FIPS 140-2 Compliance (Enterprise Tier):}
+\begin{itemize}
+    \item \textbf{Cryptographic module}: Uses FIPS-validated OpenSSL for TLS, JWT signing (HMAC-SHA256), and password hashing (bcrypt)
+    \item \textbf{Configuration}: Enabled via \inlinecode{security.fips\_mode = true} in configuration; enforces FIPS-approved algorithms only
+    \item \textbf{Restrictions}: In FIPS mode, non-FIPS algorithms (e.g., MD5, SHA-1) are disabled even if referenced in legacy index formats
+\end{itemize}
+
+\textbf{Audit Log API (Enterprise Tier):}
+\begin{itemize}
+    \item \inlinecode{GET /api/v1/admin/audit-logs?from=...&to=...&user=...} --- Query audit trail with filtering
+    \item \inlinecode{GET /api/v1/admin/audit-logs/export?format=siem} --- Export in SIEM-compatible format (CEF/JSON)
+    \item Audit events include: login/logout, user CRUD, index CRUD, role changes, configuration changes, data exports, and failed access attempts
+    \item Audit logs stored in separate SQLite database with write-once semantics (no deletion, only retention-based cleanup)
+\end{itemize}
+\end{reqbox}
+
+%% ========================================================================
+%% APPENDIX A: INDEX FORMAT SPECIFICATION
+%% ========================================================================
+\newpage
+\appendix
+\section{Index Format Specification}
+
+\subsection{Directory Layout}
+
+\begin{lstlisting}[language={},title={Index Directory Structure}]
+my-docs/
+  index_info.json        # Index metadata and format version
+  vectors.bin            # Binary vector data
+  metadata.json          # Document chunk metadata
+  hnsw_index.bin         # HNSW graph structure
+\end{lstlisting}
+
+\subsection{index\_info.json Schema}
+
+\begin{lstlisting}[language=JSON]
+{
+  "format_version": 1,
+  "name": "my-docs",
+  "description": "Company documentation index",
+  "created_at": "2025-01-15T10:30:00Z",
+  "updated_at": "2025-01-15T12:00:00Z",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_dimension": 384,
+  "vector_count": 15234,
+  "deleted_count": 47,
+  "hnsw_params": {
+    "M": 16,
+    "ef_construction": 200,
+    "ef_search": 50,
+    "metric": "cosine"
+  },
+  "chunk_config": {
+    "chunk_size": 512,
+    "chunk_overlap": 50
+  },
+  "file_hashes": {
+    "sha256_of_source_files": "abc123..."
+  }
+}
+\end{lstlisting}
+
+\subsection{vectors.bin Binary Layout}
+
+\begin{center}
+\begin{tabular}{@{}p{3.5cm}p{2cm}p{8cm}@{}}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Description} \\
+\midrule
+0 & 4 bytes & Magic number: \texttt{0x49534F56} (``ISoV'' in ASCII) \\
+4 & 4 bytes & Format version (uint32, little-endian) \\
+8 & 4 bytes & Vector count $N$ (uint32, little-endian) \\
+12 & 4 bytes & Dimension $D$ (uint32, little-endian) \\
+16 & 4 bytes & Element type: 0=float32, 1=float16 (uint32) \\
+20 & $N \times D \times 4$ bytes & Raw vector data (float32, row-major) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{notebox}[Binary Notes]
+\begin{itemize}
+    \item All integers are little-endian (standard x86/ARM)
+    \item Vectors are stored sequentially: vector 0 occupies bytes $[20, 20 + D \times 4)$, vector 1 occupies bytes $[20 + D \times 4, 20 + 2 \times D \times 4)$, etc.
+    \item Deleted vectors are NOT removed from vectors.bin; their status is tracked in metadata.json
+    \item Total file size: $20 + N \times D \times 4$ bytes
+    \item For 100K vectors at 384 dimensions: $20 + 100{,}000 \times 384 \times 4 = 153{,}600{,}020$ bytes ($\approx$ 146.5 MB)
+\end{itemize}
+\end{notebox}
+
+\subsection{metadata.json Schema}
+
+\begin{lstlisting}[language=JSON]
+{
+  "chunks": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "vector_index": 0,
+      "deleted": false,
+      "source_file": "docs/auth.md",
+      "file_extension": ".md",
+      "page": null,
+      "section": "## Authentication Flow",
+      "chunk_index": 0,
+      "text_preview": "Authentication is handled by JWT tokens...",
+      "token_count": 487,
+      "created_at": "2025-01-15T10:30:05Z"
+    }
+  ],
+  "total_chunks": 15234,
+  "total_deleted": 47
+}
+\end{lstlisting}
+
+\subsection{hnsw\_index.bin Format}
+
+\begin{center}
+\begin{tabular}{@{}p{3.5cm}p{2cm}p{8cm}@{}}
+\toprule
+\textbf{Offset} & \textbf{Size} & \textbf{Description} \\
+\midrule
+0 & 4 bytes & Magic number: \texttt{0x484E5357} (``HNSW'') \\
+4 & 4 bytes & Format version (uint32) \\
+8 & 4 bytes & Element count $N$ (uint32) \\
+12 & 4 bytes & $M$ parameter (uint32) \\
+16 & 4 bytes & $M_{max0}$ (uint32, $M \times 2$ for layer 0) \\
+20 & 4 bytes & $ef\_construction$ (uint32) \\
+24 & 4 bytes & $M\_max$ (uint32, multilayer) \\
+28 & 4 bytes & Max layer (uint32) \\
+32 & 1 byte & Metric type: 0=cosine, 1=l2, 2=inner\_product \\
+33 & $N \times 4$ bytes & Entry point assignments (uint32 per element) \\
+33+$N \times 4$ & $N \times 4$ bytes & Layer assignments (uint32 per element) \\
+33+$N \times 8$ & variable & Graph adjacency lists (compressed format) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Format Version Changelog}
+
+\begin{center}
+\begin{tabular}{@{}cp{4cm}p{7cm}@{}}
+\toprule
+\textbf{Version} & \textbf{Change} & \textbf{Migration} \\
+\midrule
+1 & Initial format & N/A (baseline) \\
+2 (future) & Add \texttt{chunk\_overlap} to metadata & Auto-migrate (additive field) \\
+3 (future) & Switch vectors.bin to float16 & Manual (requires re-encode) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ========================================================================
+%% APPENDIX B: CONFIGURATION REFERENCE
+%% ========================================================================
+\newpage
+\section{Configuration Reference}
+
+All configuration can be provided via:
+\begin{enumerate}
+    \item Environment variables (prefixed with \inlinecode{ISOCORTEX\_})
+    \item Configuration file (\inlinecode{isocortex.yaml} or \inlinecode{isocortex.json})
+    \item CLI flags (highest priority)
+\end{enumerate}
+
+Priority order: CLI flags $>$ Environment variables $>$ Configuration file $>$ Defaults.
+
+\begin{longtable}{@{}p{4cm}p{1.5cm}p{2cm}p{2cm}p{4.5cm}@{}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Default} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+\endhead
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Server}}} \\
+\midrule
+host & string & 0.0.0.0 & Valid IP/hostname & API bind address \\
+port & int & 8000 & 1--65535 & API port \\
+workers & int & 1 & 1--16 & Uvicorn worker count \\
+log\_level & string & INFO & DEBUG/INFO/WARN/ERROR & Logging verbosity \\
+secret\_key & string & auto-gen & Min 32 chars & JWT signing key \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Data}}} \\
+\midrule
+data\_dir & string & ./data & Writable path & Data storage directory \\
+model\_dir & string & \textasciitilde{}/.isocortex/models & Writable path & Model cache directory \\
+max\_memory\_mb & int & auto & 512--max\_ram & Maximum memory limit \\
+memory.warning\_threshold & float & 0.8 & 0.1--1.0 & Fraction for memory warnings \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Embedding}}} \\
+\midrule
+embedding.model & string & all-MiniLM-L6-v2 & Valid model ID & Default embedding model \\
+embedding.cache\_size & int & 1000 & 0--100000 & LRU cache entry limit \\
+embedding.queue\_size & int & 500 & 10--10000 & Embedder request queue depth \\
+embedding.batch\_size & int & 32 & 1--256 & Batch inference size \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{HNSW}}} \\
+\midrule
+hnsw.M & int & 16 & 4--128 & Graph connectivity \\
+hnsw.ef\_construction & int & 200 & 50--2000 & Construction candidate list \\
+hnsw.ef\_search & int & 50 & 10--500 & Search candidate list \\
+hnsw.metric & string & cosine & cosine/l2/ip & Distance metric \\
+hnsw.compaction.threshold & float & 0.10 & 0.01--0.50 & Tombstone ratio for compaction \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Chunking}}} \\
+\midrule
+chunk.size & int & 512 & 64--4096 & Tokens per chunk \\
+chunk.overlap & int & 50 & 0--500 & Token overlap between chunks \\
+chunk.min\_size & int & 10 & 1--100 & Minimum tokens per chunk \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Rate Limiting}}} \\
+\midrule
+rate\_limit.default & int & 100 & 1--10000 & Requests per minute (global) \\
+rate\_limit.search & int & 60 & 1--10000 & Requests per minute (search) \\
+rate\_limit.write & int & 30 & 1--10000 & Requests per minute (write) \\
+rate\_limit.burst & int & 20 & 1--1000 & Burst allowance \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Jobs}}} \\
+\midrule
+jobs.retention\_days & int & 7 & 1--365 & Job record retention period \\
+jobs.max\_concurrent & int & 2 & 1--8 & Max concurrent jobs \\
+jobs.cleanup\_interval\_hrs & int & 24 & 1--168 & Cleanup task interval \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Search}}} \\
+\midrule
+search.default\_k & int & 5 & 1--100 & Default results per query \\
+search.max\_k & int & 100 & 1--1000 & Maximum k allowed \\
+search.page\_size\_default & int & 10 & 1--100 & Default pagination size \\
+search.page\_size\_max & int & 100 & 1--100 & Maximum pagination size (server-enforced) \\
+search.batch.max\_queries & int & 50 & 1--200 & Max queries per batch \\
+search.batch.timeout & int & 30 & 1--300 & Per-query timeout (seconds) \\
+search.batch.concurrency & int & 4 & 1--16 & Parallel query processing \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{\textcolor{ctPurple}{Security}}} \\
+\midrule
+auth.token\_expiry\_hours & int & 24 & 1--72 & Access token TTL \\
+auth.refresh\_expiry\_days & int & 7 & 1--30 & Refresh token TTL \\
+auth.bcrypt\_cost & int & 12 & 10--14 & bcrypt cost factor \\
+auth.lockout\_attempts & int & 5 & 1--20 & Failed attempts before lockout \\
+auth.lockout\_minutes & int & 15 & 1--60 & Lockout duration \\
+auth.password\_min\_length & int & 12 & 8--128 & Minimum password length \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% APPENDIX C: API ERROR CODES
+%% ========================================================================
+\newpage
+\section{API Error Codes}
+
+Complete reference for all error codes returned by the IsoCortex API.
+
+\begin{longtable}{@{}cclp{7.5cm}@{}}
+\toprule
+\textbf{HTTP} & \textbf{Code} & \textbf{Category} & \textbf{Description} \\
+\midrule
+\endhead
+\multicolumn{4}{@{}l}{\textit{\textcolor{ctPurple}{Client Errors (4xx)}}} \\
+\midrule
+400 & \texttt{BAD\_REQUEST} & Validation & Malformed request syntax, invalid parameters \\
+400 & \texttt{QUERY\_TOO\_SHORT} & Search & Query text below minimum length (3 chars) \\
+400 & \texttt{INVALID\_FILTER} & Search & Malformed filter expression \\
+400 & \texttt{BATCH\_TOO\_LARGE} & Batch & Exceeds max\_queries per batch \\
+401 & \texttt{MISSING\_TOKEN} & Auth & No Authorization header provided \\
+401 & \texttt{INVALID\_TOKEN} & Auth & JWT token is malformed or tampered \\
+401 & \texttt{EXPIRED\_TOKEN} & Auth & JWT token has expired \\
+401 & \texttt{INVALID\_CREDENTIALS} & Auth & Username or password incorrect \\
+403 & \texttt{FORBIDDEN} & Auth & Insufficient role permissions \\
+403 & \texttt{ACCOUNT\_LOCKED} & Auth & Account temporarily locked (too many failed attempts) \\
+403 & \texttt{SETUP\_COMPLETED} & Auth & First-run setup already completed \\
+404 & \texttt{INDEX\_NOT\_FOUND} & Index & Specified index name does not exist \\
+404 & \texttt{DOCUMENT\_NOT\_FOUND} & Document & Specified document chunk ID does not exist \\
+404 & \texttt{USER\_NOT\_FOUND} & User & Specified user ID does not exist \\
+404 & \texttt{JOB\_NOT\_FOUND} & Job & Specified job ID does not exist \\
+409 & \texttt{INDEX\_EXISTS} & Index & An index with this name already exists \\
+409 & \texttt{USER\_EXISTS} & User & A user with this username already exists \\
+409 & \texttt{VERSION\_CONFLICT} & Index & Index format version is incompatible \\
+422 & \texttt{VALIDATION\_ERROR} & Validation & Pydantic schema validation failure \\
+429 & \texttt{RATE\_LIMITED} & Rate Limit & Request rate exceeded; check Retry-After header \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{\textcolor{ctPurple}{Server Errors (5xx)}}} \\
+\midrule
+500 & \texttt{INTERNAL\_ERROR} & General & Unexpected server error (check request\_id in logs) \\
+500 & \texttt{EMBEDDING\_FAILED} & Embedding & Model inference error \\
+500 & \texttt{INDEX\_CORRUPTED} & Index & Index data failed validation on load \\
+500 & \texttt{MIGRATION\_FAILED} & Index & Format migration failed \\
+500 & \texttt{EXTRACTION\_FAILED} & Ingestion & File extraction/parsing error \\
+503 & \texttt{SERVICE\_UNAVAILABLE} & General & Server overloaded or embedder queue full \\
+503 & \texttt{INDEX\_UNHEALTHY} & Index & Index marked unhealthy (circuit breaker) \\
+503 & \texttt{MODEL\_NOT\_LOADED} & Embedding & Embedding model not yet loaded/available \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% APPENDIX D: GLOSSARY
+%% ========================================================================
+\newpage
+\section{Glossary}
+
+\begin{longtable}{@{}p{3.5cm}p{10cm}@{}}
+\toprule
+\textbf{Term} & \textbf{Definition} \\
+\midrule
+\endhead
+ABC & Abstract Base Class --- a Python class that cannot be instantiated and defines methods that subclasses must implement \\
+Approximate Nearest Neighbor (ANN) & Search algorithms that return approximately correct nearest neighbors, trading some accuracy for significant speed gains \\
+Backpressure & A flow-control mechanism where a system signals upstream producers to slow down when it cannot process requests fast enough \\
+bcrypt & A password hashing function designed to be computationally expensive, resisting brute-force and rainbow table attacks \\
+Chunk & A segment of text extracted from a document, typically 200--1000 tokens, optimized for embedding and search relevance \\
+Compaction & The process of rebuilding an HNSW index to remove soft-deleted (tombstoned) vectors and reclaim memory \\
+Cosine Similarity & A measure of similarity between two vectors calculated as the cosine of the angle between them; range $[-1, 1]$ where 1 means identical \\
+Cursor-based Pagination & A pagination method using opaque tokens (cursors) instead of numeric offsets, providing consistent results even when data changes between requests \\
+Embedding & A dense numerical vector representation of text that captures semantic meaning; used for similarity comparison \\
+Embedding Provider & A pluggable module in IsoCortex that implements the EmbeddingProvider ABC to generate embeddings using a specific model \\
+Extractor & A plugin module that implements the FileExtractor ABC to parse specific file formats into structured text chunks \\
+HNSW & Hierarchical Navigable Small World --- a multi-layered proximity graph structure enabling efficient approximate nearest neighbor search \\
+JWT & JSON Web Token --- a compact, URL-safe means of representing claims between two parties, used for authentication \\
+LRU Cache & Least Recently Used cache --- an eviction strategy that removes the least recently accessed items when the cache reaches capacity \\
+MiniLM & A compact sentence transformer model (all-MiniLM-L6-v2) producing 384-dimensional embeddings with good quality-to-speed ratio \\
+Offset-based Pagination & A pagination method using page numbers and sizes to navigate result sets; simpler but may skip/duplicate items on concurrent modifications \\
+ReadWriteLock & A synchronization primitive allowing multiple concurrent readers OR a single exclusive writer, preventing data corruption during concurrent access \\
+Registry Pattern & A design pattern where components register themselves with a central registry for dynamic lookup and instantiation \\
+SSE (Server-Sent Events) & A protocol allowing servers to push real-time updates to clients over HTTP using a persistent connection \\
+SQLite WAL & Write-Ahead Logging mode for SQLite that enables concurrent readers and a single writer without blocking \\
+Soft Delete & A deletion pattern where records are marked as deleted (tombstoned) rather than physically removed from storage \\
+Tombstone & A marker indicating a vector or record has been soft-deleted and should be excluded from search results \\
+Token & A unit of text produced by a tokenizer; roughly equivalent to a word or subword (depends on the tokenizer used) \\
+Uvicorn & An ASGI web server implementation for Python, used to run FastAPI applications \\
+WAL Checkpoint & The process of writing WAL journal entries back into the main SQLite database file to reclaim disk space \\
+\bottomrule
+\end{longtable}
+
+%% ========================================================================
+%% END OF DOCUMENT
+%% ========================================================================
+\end{document}

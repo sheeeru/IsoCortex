@@ -1,0 +1,69 @@
+# =============================================================================
+# IsoCortex — .dockerignore
+# =============================================================================
+# Files/directories excluded from Docker build context.
+# SRS Section 14.1: Multi-stage build optimizations.
+# =============================================================================
+
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build
+*.egg
+
+# Virtual environments
+venv
+.venv
+env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+tests
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Documentation
+docs
+*.md
+LICENSE
+
+# Data (should not be in Docker image)
+data/
+*.bin
+*.db
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.*
+
+# Node (if web UI is present)
+node_modules
+.next
+web/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log

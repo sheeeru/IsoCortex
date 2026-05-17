@@ -1,0 +1,103 @@
+# =============================================================================
+# IsoCortex — .gitignore
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+ENV/
+
+# --- Testing / Coverage ---
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node.js ---
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+
+# --- LaTeX build artifacts ---
+docs/*.aux
+docs/*.log
+docs/*.toc
+docs/*.lof
+docs/*.lot
+docs/*.synctex.gz
+docs/*.pdf
+docs/*.out
+docs/*.fls
+docs/*.fdb_latexmk
+
+# --- C++ build artifacts ---
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.dSYM/
+
+# --- IsoCortex data (never commit user data) ---
+.isocortex/
+*.bin
+vectors.bin
+
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Misc ---
+*.log
+*.tmp
+*.bak
+*.swp
+npm-debug.log*
