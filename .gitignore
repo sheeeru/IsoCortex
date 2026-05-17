@@ -43,7 +43,6 @@ docs/*.toc
 docs/*.lof
 docs/*.lot
 docs/*.synctex.gz
-docs/*.pdf
 docs/*.out
 docs/*.fls
 docs/*.fdb_latexmk
