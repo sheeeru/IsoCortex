@@ -1303,7 +1303,7 @@ namespace isocortex
         // -----------------------------------------------------------------
         // Internal: logging (C++ equivalent of Python logger)
         // -----------------------------------------------------------------
-        static void logger_debug(const char *, ...) { /* no-op */ }
+        static void logger_debug(const char *, ...) {}
 
         // -----------------------------------------------------------------
         // Internal: insertion (FR-5)
@@ -1749,8 +1749,6 @@ namespace isocortex
     // =========================================================================
     // Simple logging for HNSW (avoids external dependencies)
     // =========================================================================
-    inline void HnswIndex::logger_debug(const char *, ...) { /* no-op */ }
-
 } // namespace isocortex
 
 #endif // ISO_HNSW_HPP

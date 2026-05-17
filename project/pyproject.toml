@@ -101,7 +101,7 @@ include = ["isocortex*"]
 
 [tool.setuptools.package-dir]
 isocortex = "src/isocortex"
-isocortex.cli = "cli"
+"isocortex.cli" = "cli"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

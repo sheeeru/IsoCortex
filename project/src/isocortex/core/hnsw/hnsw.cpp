@@ -779,7 +779,7 @@ static void test_save_load()
     }
 
     // Clean up
-    std::remove(tmp_path);
+    std::remove(tmp_path.c_str());
 }
 
 static void test_accessor_bounds()
