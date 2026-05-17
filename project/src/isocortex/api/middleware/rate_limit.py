@@ -57,7 +57,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         rate_limiter = get_rate_limiter()
 
         allowed, remaining, reset_at = rate_limiter.is_allowed(
-            key=key,
+            key_hash=key,
             endpoint=path,
             limit=limit,
             window_seconds=window,

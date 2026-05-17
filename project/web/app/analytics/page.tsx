@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Requests/min</span>
-                    <span className="text-gray-300">{rateLimits.requests_per_minute}</span>
+                    <span className="text-gray-300">{rateLimits?.requests_per_minute ?? 100}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Burst size</span>
@@ -191,16 +191,16 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Current usage</span>
-                    <span className="text-gray-300">{rateLimits.current_usage.requests} / {rateLimits.requests_per_minute}</span>
+                    <span className="text-gray-300">{rateLimits?.current_usage?.requests ?? 0} / {rateLimits?.requests_per_minute ?? 100}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Remaining</span>
-                    <span className="text-gray-300">{rateLimits.current_usage.remaining}</span>
+                    <span className="text-gray-300">{rateLimits?.current_usage?.remaining ?? 0}</span>
                   </div>
-                  {rateLimits.current_usage.reset_at && (
+                  {rateLimits?.current_usage?.reset_at && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Resets at</span>
-                      <span className="text-gray-300 text-xs">{new Date(rateLimits.current_usage.reset_at).toLocaleTimeString()}</span>
+                      <span className="text-gray-300 text-xs">{new Date(rateLimits?.current_usage?.reset_at).toLocaleTimeString()}</span>
                     </div>
                   )}
                 </div>

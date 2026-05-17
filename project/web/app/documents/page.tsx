@@ -33,7 +33,7 @@ function DocumentsContent() {
   useEffect(() => {
     indexesApi
       .list()
-      .then(setIndexes)
+      .then((data: any) => { if (Array.isArray(data)) setIndexes(data); else if (data && Array.isArray(data.indexes)) setIndexes(data.indexes); else setIndexes([]); })
       .catch(() => addToast('Failed to load indexes', 'error'))
       .finally(() => setLoadingIndexes(false));
   }, [addToast]);

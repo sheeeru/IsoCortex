@@ -83,7 +83,7 @@ export default function SettingsPage() {
               <div className="pt-2 border-t" style={{ borderColor: '#2D1F45' }}>
                 <p className="text-xs text-gray-500 mb-2">Component Status</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {Object.entries(health.components).map(([name, status]) => (
+                  {Object.entries(health?.components ?? {}).map(([name, status]) => (
                     <div key={name} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#0F0A1A' }}>
                       <div
                         className="w-2 h-2 rounded-full"

@@ -23,7 +23,6 @@ import uuid
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +35,8 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        """Handle Pydantic validation errors (422).
-
-        SRS Section 10.4: VALIDATION_ERROR (422).
-        """
-        errors = exc.errors()
-        detail = "; ".join(
-            f"{e.get('loc', ['?'])[-1]}: {e.get('msg', '')}" for e in errors
-        )
-            @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
         """Handle Pydantic validation errors (422)."""
         raw_errors = exc.errors()
-        # Sanitize errors so ValueError objects in ctx are JSON-serializable
         errors = []
         for e in raw_errors:
             safe = dict(e)
@@ -82,88 +70,49 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(ValueError)
     async def value_error_handler(request: Request, exc: ValueError):
-        """Handle ValueError (400 Bad Request).
-
-        SRS Section 10.4: BAD_REQUEST (400).
-        """
+        """Handle ValueError (400 Bad Request)."""
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "error": "BAD_REQUEST",
-                "code": 400,
-                "detail": str(exc),
-                "request_id": request_id,
-            },
+            content={"error": "BAD_REQUEST", "code": 400, "detail": str(exc), "request_id": request_id},
         )
 
     @app.exception_handler(FileNotFoundError)
     async def not_found_handler(request: Request, exc: FileNotFoundError):
-        """Handle FileNotFoundError (404 Not Found).
-
-        SRS Section 10.4: NOT_FOUND (404).
-        """
+        """Handle FileNotFoundError (404 Not Found)."""
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "error": "NOT_FOUND",
-                "code": 404,
-                "detail": str(exc),
-                "request_id": request_id,
-            },
+            content={"error": "NOT_FOUND", "code": 404, "detail": str(exc), "request_id": request_id},
         )
 
     @app.exception_handler(FileExistsError)
     async def conflict_handler(request: Request, exc: FileExistsError):
-        """Handle FileExistsError (409 Conflict).
-
-        SRS Section 10.4: INDEX_EXISTS / USER_EXISTS (409).
-        """
+        """Handle FileExistsError (409 Conflict)."""
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
-            content={
-                "error": "CONFLICT",
-                "code": 409,
-                "detail": str(exc),
-                "request_id": request_id,
-            },
+            content={"error": "CONFLICT", "code": 409, "detail": str(exc), "request_id": request_id},
         )
 
     @app.exception_handler(PermissionError)
     async def forbidden_handler(request: Request, exc: PermissionError):
         """Handle PermissionError (403 Forbidden)."""
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
-            content={
-                "error": "FORBIDDEN",
-                "code": 403,
-                "detail": str(exc),
-                "request_id": request_id,
-            },
+            content={"error": "FORBIDDEN", "code": 403, "detail": str(exc), "request_id": request_id},
         )
 
     @app.exception_handler(Exception)
     async def generic_error_handler(request: Request, exc: Exception):
-        """Handle all uncaught exceptions (500 Internal Error).
-
-        SRS Section 10.4: INTERNAL_ERROR (500).
-        Logs full traceback server-side, returns safe message to client.
-        """
+        """Handle all uncaught exceptions (500 Internal Error)."""
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-
         logger.error(
             "[INTERNAL] %s %s — %s  request_id=%s\n%s",
             request.method, request.url.path, exc, request_id,
             traceback.format_exc(),
         )
-
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={

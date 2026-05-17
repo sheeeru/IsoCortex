@@ -10,14 +10,8 @@ import { cn, formatNumber, formatBytes, timeAgo, formatDate } from '@/lib/utils'
 import {
   PlusIcon,
   TrashIcon,
-  ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
   XMarkIcon,
   CircleStackIcon,
-  ExclamationCircleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ArrowPathIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 
@@ -33,8 +27,10 @@ export default function IndexesPage() {
   const fetchIndexes = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await indexesApi.list();
-      setIndexes(data);
+      const data = await indexesApi.list() as any;
+      if (Array.isArray(data)) setIndexes(data);
+      else if (data && Array.isArray(data.indexes)) setIndexes(data.indexes);
+      else setIndexes([]);
     } catch {
       addToast('Failed to load indexes', 'error');
     } finally {
@@ -52,7 +48,6 @@ export default function IndexesPage() {
       const job = await indexesApi.create(data);
       addToast(`Index "${data.name}" creation started (Job: ${job.job_id})`, 'success');
       setShowCreate(false);
-      // Poll job
       pollJob(job.job_id);
     } catch (err) {
       if (err instanceof ApiError) addToast(err.detail, 'error');
@@ -124,7 +119,7 @@ export default function IndexesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {indexes.map((idx) => (
+          {indexes.map((idx: any) => (
             <Link
               key={idx.name}
               href={`/indexes/${encodeURIComponent(idx.name)}`}
@@ -170,11 +165,11 @@ export default function IndexesPage() {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Dimensions</span>
-                  <span className="text-gray-300">{idx.dimension}</span>
+                  <span className="text-gray-300">{idx.dimension || 384}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Metric</span>
-                  <span className="text-gray-300">{idx.metric}</span>
+                  <span className="text-gray-300">{idx.metric || 'cosine'}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Documents</span>

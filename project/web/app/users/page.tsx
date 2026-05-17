@@ -30,8 +30,10 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await authApi.listUsers();
-      setUsers(data);
+      const data = await authApi.listUsers() as any;
+      if (Array.isArray(data)) setUsers(data);
+      else if (data && Array.isArray(data.users)) setUsers(data.users);
+      else setUsers([]);
     } catch {
       addToast('Failed to load users', 'error');
     } finally {
@@ -121,7 +123,7 @@ export default function UsersPage() {
               <tbody>
                 {users.map((user) => (
                   <tr
-                    key={user.id}
+                    key={user.id || user.username || user.email || Math.random()}
                     className="border-b hover:bg-white/[0.02] transition-colors"
                     style={{ borderColor: '#2D1F45' }}
                   >

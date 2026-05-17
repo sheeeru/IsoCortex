@@ -72,7 +72,17 @@ export default function DashboardPage() {
         healthApi.check(),
       ]);
 
-      if (idxRes.status === 'fulfilled') setIndexes(idxRes.value);
+      if (idxRes.status === 'fulfilled') {
+        // Backend returns { indexes: [...], total: N } — extract the array
+        const data = idxRes.value as any;
+        if (Array.isArray(data)) {
+          setIndexes(data);
+        } else if (data && Array.isArray(data.indexes)) {
+          setIndexes(data.indexes);
+        } else {
+          setIndexes([]);
+        }
+      }
       if (healthRes.status === 'fulfilled') setHealth(healthRes.value);
 
       try {
@@ -94,8 +104,9 @@ export default function DashboardPage() {
 
   if (loading) return <PageSpinner />;
 
-  const totalVectors = indexes.reduce((sum, i) => sum + i.vector_count, 0);
-  const totalDocs = indexes.reduce((sum, i) => sum + i.document_count, 0);
+  const safeIndexes = Array.isArray(indexes) ? indexes : [];
+  const totalVectors = safeIndexes.reduce((sum: number, i: any) => sum + (i.vector_count || 0), 0);
+  const totalDocs = safeIndexes.reduce((sum: number, i: any) => sum + (i.document_count || 0), 0);
   const healthy = health?.status === 'healthy';
 
   return (
@@ -136,129 +147,52 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={CircleStackIcon}
-          label="Indexes"
-          value={stats?.total_indexes ?? indexes.length}
-          sub="Total indexes"
-          color="#C59B47"
-        />
-        <StatCard
-          icon={DocumentTextIcon}
-          label="Documents"
-          value={formatNumber(stats?.total_documents ?? totalDocs)}
-          sub="Across all indexes"
-          color="#10B981"
-        />
-        <StatCard
-          icon={ArrowTrendingUpIcon}
-          label="Vectors"
-          value={formatNumber(stats?.total_vectors ?? totalVectors)}
-          sub="Embeddings stored"
-          color="#8B5CF6"
-        />
-        <StatCard
-          icon={UsersIcon}
-          label="Users"
-          value={stats?.total_users ?? '—'}
-          sub="Registered accounts"
-          color="#3B82F6"
-        />
+        <StatCard icon={CircleStackIcon} label="Indexes" value={stats?.total_indexes ?? safeIndexes.length} sub="Total indexes" color="#C59B47" />
+        <StatCard icon={DocumentTextIcon} label="Documents" value={formatNumber(stats?.total_documents ?? totalDocs)} sub="Across all indexes" color="#10B981" />
+        <StatCard icon={ArrowTrendingUpIcon} label="Vectors" value={formatNumber(stats?.total_vectors ?? totalVectors)} sub="Embeddings stored" color="#8B5CF6" />
+        <StatCard icon={UsersIcon} label="Users" value={stats?.total_users ?? '—'} sub="Registered accounts" color="#3B82F6" />
       </div>
 
       {/* System Info */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
-            icon={MagnifyingGlassIcon}
-            label="Total Searches"
-            value={formatNumber(stats.total_searches)}
-            sub="All time"
-            color="#F59E0B"
-          />
-          <StatCard
-            icon={ServerIcon}
-            label="Memory Usage"
-            value={formatBytes(stats.memory_usage_bytes)}
-            sub="RSS"
-            color="#EC4899"
-          />
-          <StatCard
-            icon={ClockIcon}
-            label="Uptime"
-            value={formatUptime(stats.uptime_seconds)}
-            sub="Since last restart"
-            color="#06B6D4"
-          />
+          <StatCard icon={MagnifyingGlassIcon} label="Total Searches" value={formatNumber(stats.total_searches)} sub="All time" color="#F59E0B" />
+          <StatCard icon={ServerIcon} label="Memory Usage" value={formatBytes(stats.memory_usage_bytes)} sub="RSS" color="#EC4899" />
+          <StatCard icon={ClockIcon} label="Uptime" value={formatUptime(stats.uptime_seconds)} sub="Since last restart" color="#06B6D4" />
         </div>
       )}
 
       {/* Indexes List */}
-      <div
-        className="rounded-xl border overflow-hidden"
-        style={{ backgroundColor: '#1A1228', borderColor: '#2D1F45' }}
-      >
+      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: '#1A1228', borderColor: '#2D1F45' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: '#2D1F45' }}>
           <h2 className="text-base font-semibold text-white">Recent Indexes</h2>
-          <Link
-            href="/indexes"
-            className="text-sm font-medium hover:underline"
-            style={{ color: '#C59B47' }}
-          >
-            View all
-          </Link>
+          <Link href="/indexes" className="text-sm font-medium hover:underline" style={{ color: '#C59B47' }}>View all</Link>
         </div>
 
-        {indexes.length === 0 ? (
+        {safeIndexes.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <CircleStackIcon className="w-10 h-10 text-gray-600 mx-auto mb-3" />
             <p className="text-gray-400 text-sm">No indexes created yet</p>
-            <p className="text-gray-500 text-xs mt-1">
-              Get started by creating your first index
-            </p>
-            <Link
-              href="/indexes"
-              className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              style={{ backgroundColor: '#311B5B' }}
-            >
+            <p className="text-gray-500 text-xs mt-1">Get started by creating your first index</p>
+            <Link href="/indexes" className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style={{ backgroundColor: '#311B5B' }}>
               <PlusIcon className="w-4 h-4" />
               Create Index
             </Link>
           </div>
         ) : (
           <div className="divide-y" style={{ borderColor: '#2D1F45' }}>
-            {indexes.slice(0, 5).map((idx) => (
-              <Link
-                key={idx.name}
-                href={`/indexes/${encodeURIComponent(idx.name)}`}
-                className="flex items-center justify-between px-6 py-3 hover:bg-white/[0.02] transition-colors"
-              >
+            {safeIndexes.slice(0, 5).map((idx: any) => (
+              <Link key={idx.name} href={`/indexes/${encodeURIComponent(idx.name)}`} className="flex items-center justify-between px-6 py-3 hover:bg-white/[0.02] transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{
-                      backgroundColor:
-                        idx.status === 'ready'
-                          ? '#10B981'
-                          : idx.status === 'building'
-                          ? '#F59E0B'
-                          : '#EF4444',
-                    }}
-                  />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: idx.status === 'ready' ? '#10B981' : idx.status === 'building' ? '#F59E0B' : '#EF4444' }} />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white truncate">{idx.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {idx.dimension}D &middot; {idx.metric} &middot; {timeAgo(idx.updated_at)}
-                    </p>
+                    <p className="text-xs text-gray-500">{idx.dimension || 384}D &middot; {idx.metric || 'cosine'} &middot; {timeAgo(idx.updated_at)}</p>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-4">
-                  <p className="text-sm text-gray-300">
-                    {formatNumber(idx.document_count)} docs
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatNumber(idx.vector_count)} vectors
-                  </p>
+                  <p className="text-sm text-gray-300">{formatNumber(idx.document_count || 0)} docs</p>
+                  <p className="text-xs text-gray-500">{formatNumber(idx.vector_count || 0)} vectors</p>
                 </div>
               </Link>
             ))}
