@@ -44,6 +44,24 @@ def register_error_handlers(app: FastAPI) -> None:
         detail = "; ".join(
             f"{e.get('loc', ['?'])[-1]}: {e.get('msg', '')}" for e in errors
         )
+            @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        """Handle Pydantic validation errors (422)."""
+        raw_errors = exc.errors()
+        # Sanitize errors so ValueError objects in ctx are JSON-serializable
+        errors = []
+        for e in raw_errors:
+            safe = dict(e)
+            if "ctx" in safe and isinstance(safe["ctx"], dict):
+                safe["ctx"] = {
+                    k: str(v) if not isinstance(v, (str, int, float, bool, list, dict, type(None))) else v
+                    for k, v in safe["ctx"].items()
+                }
+            errors.append(safe)
+
+        detail = "; ".join(
+            f"{e.get('loc', ['?'])[-1]}: {e.get('msg', '')}" for e in errors
+        )
         request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
 
         logger.warning(
