@@ -437,17 +437,36 @@ class UploadScreen(ctk.CTkFrame):
         try:
             self._ingest_btn.configure(text="Processing\u2026", state="disabled")
             self._progress_bar.set(0)
-            self._status_label.configure(
-                text="Indexing in progress\u2026",
-                text_color=COLOR_PURPLE_LIGHT,
-            )
         except Exception:
             pass
 
         def _run() -> None:
             try:
+                # Step 1: Tell user we're loading the AI model
+                self.after(0, lambda: self._safe_set_status(
+                    "Loading AI model (first time may download ~90MB)\u2026",
+                    COLOR_PURPLE_LIGHT,
+                ))
+                self.after(0, lambda: self._progress_bar.set(0.05))
+
                 # Auto-create the default index if needed
                 index_name = self._app.engine.ensure_default_index()
+
+                # Step 2: Pre-load the model before indexing
+                if not self._app.engine.ensure_model():
+                    self.after(0, lambda: self._on_ingestion_error(
+                        "Failed to load AI model. Make sure onnxruntime and tokenizers are installed: "
+                        "pip install onnxruntime tokenizers"
+                    ))
+                    return
+
+                self.after(0, lambda: self._safe_set_status(
+                    "Model loaded. Indexing files\u2026",
+                    COLOR_PURPLE_LIGHT,
+                ))
+                self.after(0, lambda: self._progress_bar.set(0.1))
+
+                # Step 3: Ingest files
                 stats = self._app.engine.ingest_files(
                     index_name,
                     self._selected_files[:],

@@ -70,7 +70,6 @@ class SearchScreen(ctk.CTkFrame):
         self._build_header(content)
         self._build_shimmer_bar(content)
         self._build_search_bar(content)
-        self._build_sample_chips(content)
         GradientDivider(content, height=1).pack(fill="x", pady=(PADDING_SM, PADDING_MD))
         self._build_results_header(content)
         self._build_results_area(content)
@@ -162,24 +161,7 @@ class SearchScreen(ctk.CTkFrame):
         )
         self._search_btn.pack(side="right")
 
-    # ── Sample Chips (create_badge) ──────────────────────────────────
 
-    def _build_sample_chips(self, parent):
-        chips = ctk.CTkFrame(parent, fg_color="transparent")
-        chips.pack(fill="x", pady=(0, PADDING_SM))
-
-        ctk.CTkLabel(chips, text="Try:", font=(FONT_FAMILY, FONT_SIZE_XXS), text_color=COLOR_TEXT_DIM).pack(side="left", padx=(0, PADDING_SM))
-        for query in ["Summarize key findings", "Main risks?", "Methodology", "Compare results"]:
-            badge = create_badge(
-                chips, text=query,
-                color=COLOR_PURPLE_LIGHT,
-            )
-            badge.pack(side="left", padx=(0, PADDING_SM))
-            badge.configure(cursor="hand2")
-            badge.bind(
-                "<Button-1>",
-                lambda e, q=query: self._fill_query(q),
-            )
 
     # ── Results Header ───────────────────────────────────────────────
 

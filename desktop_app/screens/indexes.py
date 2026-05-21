@@ -175,22 +175,30 @@ class IndexesScreen(ctk.CTkFrame):
 
         try:
             indexes = self._app.engine.list_indexes()
-
-            if not indexes:
-                self._show_empty_state()
-                return
-
-            for i, idx in enumerate(indexes):
-                delay = (i % 3) * ANIM_DELAY_200  # stagger: 0, 200, 400, 0, 200, 400, …
-                self._create_index_card(idx, fade_delay=delay)
-
-        except Exception:
+        except Exception as exc:
             ctk.CTkLabel(
                 self._list_frame,
-                text="Error loading indexes.",
+                text=f"Error loading indexes: {exc}",
                 font=(FONT_FAMILY, FONT_SIZE_NORMAL),
                 text_color=COLOR_ERROR,
             ).pack(pady=40)
+            return
+
+        if not indexes:
+            self._show_empty_state()
+            return
+
+        for i, idx in enumerate(indexes):
+            try:
+                delay = (i % 3) * ANIM_DELAY_200  # stagger: 0, 200, 400, 0, 200, 400, …
+                self._create_index_card(idx, fade_delay=delay)
+            except Exception as exc:
+                ctk.CTkLabel(
+                    self._list_frame,
+                    text=f"Error rendering index '{getattr(idx, 'name', '?')}': {exc}",
+                    font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                    text_color=COLOR_ERROR,
+                ).pack(fill="x", pady=2)
 
     # ── Empty State ────────────────────────────────────────────────
 
@@ -248,7 +256,7 @@ class IndexesScreen(ctk.CTkFrame):
         # FadeInFrame wrapper for staggered entrance animation
         fade_wrapper = FadeInFrame(
             self._list_frame,
-            fade_delay=fade_delay,
+            delay=fade_delay,
             fg_color="transparent",
         )
         fade_wrapper.pack(fill="x", pady=(0, PADDING_SM))

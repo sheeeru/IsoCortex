@@ -100,30 +100,3 @@ if __name__ == "__main__":
         clean()
     else:
         build(onefile=args.onefile)
-
-# mac app
-#pyinstaller -y --name "IsoCortex" --noconsole --onedir \
-#  --add-data "desktop_app/assets:desktop_app/assets" \
-#  --hidden-import=desktop_app \
-#  --hidden-import=desktop_app.app \
-#  --hidden-import=desktop_app.theme \
-#  --hidden-import=desktop_app.engine \
-#  --hidden-import=desktop_app.workers \
-#  --hidden-import=desktop_app.screens \
-#  --hidden-import=desktop_app.components \
-#  --paths . \
-#  --exclude-module=torch \
-#  --exclude-module=tensorflow \
-#  --exclude-module=scipy \
-# --exclude-module=sklearn \
-#  --exclude-module=matplotlib \
-#  --exclude-module=pandas \
-#  --exclude-module=cv2 \
-#  --exclude-module=sympy \
-#  --exclude-module=lxml \
-#  --exclude-module=sqlalchemy \
-#  --exclude-module=pydantic \
-#  --exclude-module=pytest \
-#  --exclude-module=rich \
-#  --exclude-module=PIL.SpiderImagePlugin \
-#  desktop_app/main.py

@@ -15,6 +15,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import threading
 import time
 import uuid
@@ -52,7 +53,7 @@ def _highlight_words(text: str, query_words: list[str]) -> str:
 # ======================================================================
 
 DEFAULT_DATA_DIR = Path.home() / ".isocortex"
-DEFAULT_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2 (ONNX)"
 DEFAULT_VECTOR_DIM = 384
 DEFAULT_HNSW_M = 16
 DEFAULT_HNSW_EF_CONSTRUCTION = 200
@@ -157,6 +158,8 @@ class IsoCortexEngine:
         # In-memory state
         self._loaded_indices: dict[str, dict] = {}  # name -> {vectors, metadata}
         self._embed_model = None
+        self._tokenizer = None
+        self._ort_session = None
         self._current_user: Optional[dict] = None
         self._jwt_secret = self._get_or_create_jwt_secret()
         self._lock = threading.Lock()
@@ -591,51 +594,142 @@ class IsoCortexEngine:
     # Embedding Model
     # ------------------------------------------------------------------
 
+    def _get_model_dir(self) -> Path:
+        """Return the directory containing the ONNX model and tokenizer files."""
+        # Look for the bundled model next to this file
+        bundled = Path(__file__).parent / "assets" / "model"
+        if bundled.exists() and (bundled / "model.onnx").exists():
+            return bundled
+        # Fallback: check PyInstaller _MEIPASS
+        if hasattr(sys, "_MEIPASS"):
+            bundled = Path(sys._MEIPASS) / "desktop_app" / "assets" / "model"
+            if bundled.exists() and (bundled / "model.onnx").exists():
+                return bundled
+        raise FileNotFoundError(
+            "ONNX model files not found. Expected model.onnx in "
+            "desktop_app/assets/model/"
+        )
+
     def ensure_model(self) -> bool:
-        """Ensure the embedding model is loaded. Returns True on success."""
+        """Ensure the embedding model (ONNX) is loaded. Returns True on success."""
         if self._embed_model is not None:
             return True
 
         try:
-            from sentence_transformers import SentenceTransformer
-            logger.info("Loading embedding model: %s", DEFAULT_MODEL_NAME)
-            self._embed_model = SentenceTransformer(DEFAULT_MODEL_NAME)
+            import onnxruntime as ort
+            from tokenizers import Tokenizer
 
-            # Verify dimensions
-            test_vec = self._embed_model.encode("test", show_progress_bar=False)
-            if test_vec.shape[0] != DEFAULT_VECTOR_DIM:
+            model_dir = self._get_model_dir()
+            onnx_path = model_dir / "model.onnx"
+            tok_path = model_dir / "tokenizer.json"
+
+            logger.info("Loading ONNX embedding model from: %s", onnx_path)
+
+            # Load tokenizer
+            self._tokenizer = Tokenizer.from_file(str(tok_path))
+            self._tokenizer.enable_truncation(max_length=128)
+            self._tokenizer.enable_padding(length=128)
+
+            # Load ONNX model
+            sess_options = ort.SessionOptions()
+            sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            self._ort_session = ort.InferenceSession(
+                str(onnx_path),
+                sess_options=sess_options,
+            )
+
+            # Verify output dimensions
+            test_encoding = self._tokenizer.encode("test")
+            ort_inputs = {
+                "input_ids": np.array([test_encoding.ids], dtype=np.int64),
+                "attention_mask": np.array([test_encoding.attention_mask], dtype=np.int64),
+                "token_type_ids": np.array([test_encoding.type_ids], dtype=np.int64),
+            }
+            test_output = self._ort_session.run(None, ort_inputs)
+            # Mean pooling over token embeddings (CLS-style pooling)
+            last_hidden = test_output[0]  # (1, seq_len, hidden_dim)
+            mask_expanded = ort_inputs["attention_mask"][:, :, np.newaxis]  # (1, seq_len, 1)
+            sum_emb = (last_hidden * mask_expanded).sum(axis=1)
+            count = mask_expanded.sum(axis=1).clip(min=1e-9)
+            mean_pooled = (sum_emb / count)  # (1, hidden_dim)
+            # L2 normalize
+            norms = np.linalg.norm(mean_pooled, axis=1, keepdims=True)
+            normalized = mean_pooled / norms.clip(min=1e-9)
+
+            if normalized.shape[1] != DEFAULT_VECTOR_DIM:
                 logger.error(
                     "Model output dimension %d != expected %d",
-                    test_vec.shape[0], DEFAULT_VECTOR_DIM,
+                    normalized.shape[1], DEFAULT_VECTOR_DIM,
                 )
-                self._embed_model = None
+                self._embed_model = False
                 return False
 
-            logger.info("Embedding model loaded successfully")
+            self._embed_model = True  # Model loaded successfully
+            logger.info("ONNX embedding model loaded successfully (dim=%d)", normalized.shape[1])
             return True
-        except ImportError:
+
+        except ImportError as exc:
             logger.error(
-                "sentence-transformers not installed. "
-                "Run: pip install sentence-transformers"
+                "Missing dependency for ONNX model: %s. "
+                "Install with: pip install onnxruntime tokenizers",
+                exc,
             )
             return False
-        except Exception as exc:
-            logger.error("Failed to load embedding model: %s", exc)
+        except FileNotFoundError as exc:
+            logger.error("Model files not found: %s", exc)
             return False
+        except Exception as exc:
+            logger.error("Failed to load ONNX embedding model: %s", exc, exc_info=True)
+            return False
+
+    def _encode_texts(self, texts: list[str]) -> Optional[np.ndarray]:
+        """Run texts through ONNX model and return L2-normalized embeddings."""
+        if not texts or self._embed_model is None:
+            return None
+
+        import numpy as np
+
+        # Tokenize all texts
+        encodings = self._tokenizer.encode_batch(texts)
+
+        input_ids = np.array([e.ids for e in encodings], dtype=np.int64)
+        attention_mask = np.array([e.attention_mask for e in encodings], dtype=np.int64)
+        token_type_ids = np.array([e.type_ids for e in encodings], dtype=np.int64)
+
+        # Check if model needs token_type_ids
+        input_names = {inp.name for inp in self._ort_session.get_inputs()}
+        ort_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+        }
+        if "token_type_ids" in input_names:
+            ort_inputs["token_type_ids"] = token_type_ids
+
+        # Run inference
+        outputs = self._ort_session.run(None, ort_inputs)
+        last_hidden = outputs[0]  # (batch, seq_len, hidden_dim)
+
+        # Mean pooling (CLS-style pooling)
+        mask_expanded = attention_mask[:, :, np.newaxis].astype(np.float32)
+        sum_emb = (last_hidden * mask_expanded).sum(axis=1)
+        count = mask_expanded.sum(axis=1).clip(min=1e-9)
+        mean_pooled = sum_emb / count
+
+        # L2 normalize
+        norms = np.linalg.norm(mean_pooled, axis=1, keepdims=True)
+        normalized = mean_pooled / norms.clip(min=1e-9)
+
+        return normalized.astype(np.float32)
 
     def embed_text(self, text: str) -> Optional[np.ndarray]:
         """Embed a single text string into a 384-dim vector."""
         if not self.ensure_model():
             return None
         try:
-            vector = self._embed_model.encode(
-                text,
-                show_progress_bar=False,
-                normalize_embeddings=True,
-            )
-            if vector.ndim == 2:
-                vector = vector[0]
-            return vector.astype(np.float32)
+            vectors = self._encode_texts([text])
+            if vectors is not None:
+                return vectors[0]
+            return None
         except Exception as exc:
             logger.error("Embedding failed: %s", exc)
             return None
@@ -645,13 +739,7 @@ class IsoCortexEngine:
         if not texts or not self.ensure_model():
             return None
         try:
-            vectors = self._embed_model.encode(
-                texts,
-                batch_size=min(DEFAULT_BATCH_SIZE, len(texts)),
-                show_progress_bar=False,
-                normalize_embeddings=True,
-            )
-            return vectors.astype(np.float32)
+            return self._encode_texts(texts)
         except Exception as exc:
             logger.error("Batch embedding failed: %s", exc)
             return None
@@ -659,11 +747,10 @@ class IsoCortexEngine:
     def get_model_status(self) -> dict:
         """Return status of the embedding model."""
         if self._embed_model is not None:
-            device = getattr(self._embed_model, "device", "unknown")
             return {
                 "loaded": True,
                 "model_name": DEFAULT_MODEL_NAME,
-                "device": str(device),
+                "device": "ONNX Runtime",
                 "dimension": DEFAULT_VECTOR_DIM,
             }
         return {
@@ -912,7 +999,11 @@ class IsoCortexEngine:
 
         # Ensure model
         if not self.ensure_model():
-            raise RuntimeError("Failed to load embedding model")
+            raise RuntimeError(
+                "Could not load the AI embedding model. "
+                "Please install onnxruntime and tokenizers: "
+                "pip install onnxruntime tokenizers"
+            )
 
         # Process each file
         texts_to_embed = []
