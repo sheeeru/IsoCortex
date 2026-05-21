@@ -10,18 +10,48 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install dependencies
-        run: pip install pyinstaller customtkinter Pillow numpy bcrypt pymupdf python-docx python-pptx openpyxl
+        run: pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+
       - name: Build Windows .exe
         run: |
-          pyinstaller -y --name "IsoCortex" --noconsole --onedir --add-data "desktop_app\assets;desktop_app\assets" --hidden-import=desktop_app --hidden-import=desktop_app.app --hidden-import=desktop_app.theme --hidden-import=desktop_app.engine --hidden-import=desktop_app.workers --hidden-import=desktop_app.screens --hidden-import=desktop_app.components --paths . desktop_app/main.py
-      - name: Zip build
+          pyinstaller -y --name "IsoCortex" --noconsole --onedir --add-data "desktop_app\assets;desktop_app\assets" --hidden-import=desktop_app --hidden-import=desktop_app.app --hidden-import=desktop_app.theme --hidden-import=desktop_app.engine --hidden-import=desktop_app.workers --hidden-import=desktop_app.screens --hidden-import=desktop_app.components --collect-all onnxruntime --collect-data tokenizers --paths . desktop_app/main.py
+
+      - name: Zip Windows build
         run: Compress-Archive -Path dist/IsoCortex/* -DestinationPath IsoCortex-Windows.zip
-      - name: Upload artifact
+
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: IsoCortex-Windows
           path: IsoCortex-Windows.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+
+      - name: Build macOS .app
+        run: |
+          pyinstaller -y --name "IsoCortex" --noconsole --onedir --add-data "desktop_app/assets:desktop_app/assets" --hidden-import=desktop_app --hidden-import=desktop_app.app --hidden-import=desktop_app.theme --hidden-import=desktop_app.engine --hidden-import=desktop_app.workers --hidden-import=desktop_app.screens --hidden-import=desktop_app.components --collect-all onnxruntime --collect-data tokenizers --paths . desktop_app/main.py
+
+      - name: Zip macOS build
+        run: zip -r IsoCortex-macOS.zip dist/IsoCortex/
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IsoCortex-macOS
+          path: IsoCortex-macOS.zip
