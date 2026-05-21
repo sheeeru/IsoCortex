@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, Terminal, Globe, Cpu, Database, Layers, Search, BarChart3, Key, Shield, Container } from 'lucide-react';
+import { Copy, Check, Terminal, Globe, Cpu, Database, Layers, Search, BarChart3, Key, Shield, Container, Braces } from 'lucide-react';
 
 const codeExamples = [
   {
@@ -136,23 +136,21 @@ export function ApiPreview() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const activeExample = codeExamples.find((e) => e.id === activeTab) || codeExamples[0];
-
   return (
     <section id="api" className="relative py-24 lg:py-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-iso-purple/10 border border-iso-purple/20 mb-4">
             <div className="w-1.5 h-1.5 rounded-full bg-iso-purple" />
-            <span className="text-xs font-medium text-iso-purple tracking-wide uppercase">Developer Experience</span>
+            <span className="text-xs font-medium text-iso-purple tracking-wide uppercase">Integration Options</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
-            Built for{' '}
-            <span className="gradient-text">Developers</span>
+            Fits Into{' '}
+            <span className="gradient-text">Your Workflow</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Three ways to use IsoCortex: CLI for power users, Python SDK for integrations,
-            REST API for everything else.
+            Three ways to use IsoCortex: command line for quick searches, web dashboard for teams,
+            REST API for system integration.
           </p>
         </div>
 
@@ -252,7 +250,7 @@ export function ApiPreview() {
                 { icon: BarChart3, label: 'SQLite (WAL)', desc: 'Analytics storage' },
                 { icon: Container, label: 'Docker + Compose', desc: 'Single-command deploy' },
                 { icon: Key, label: 'slowapi', desc: 'Rate limiting' },
-                { icon: Layers, label: 'Prisma ORM', desc: 'Database migrations' },
+                { icon: Braces, label: 'Prisma ORM', desc: 'Database migrations' },
               ].map((tech) => (
                 <div
                   key={tech.label}

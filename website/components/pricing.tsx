@@ -4,17 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Star, Zap, Building2, Briefcase } from 'lucide-react';
 
+const GITHUB = 'https://github.com/sheeeru/IsoCortex';
+
 const tiers = [
   {
     name: 'Open Source',
     price: 'Free',
     period: '',
-    description: 'For developers and individuals who want powerful local search.',
+    description: 'For individuals and small teams who need private local search.',
     icon: Zap,
     features: [
-      { text: 'CLI with 15 commands', included: true },
-      { text: 'Single index (default)', included: true },
       { text: 'Full ingestion pipeline (20+ formats)', included: true },
+      { text: 'Single index (default)', included: true },
       { text: 'C++ HNSW engine with SIMD', included: true },
       { text: 'Sentence-aware chunking', included: true },
       { text: 'Incremental indexing', included: true },
@@ -29,6 +30,7 @@ const tiers = [
     ],
     cta: 'Download on GitHub',
     ctaStyle: 'outline' as const,
+    ctaHref: GITHUB,
     popular: false,
   },
   {
@@ -55,6 +57,7 @@ const tiers = [
     ],
     cta: 'Start Free Trial',
     ctaStyle: 'default' as const,
+    ctaHref: GITHUB,
     popular: true,
   },
   {
@@ -81,6 +84,7 @@ const tiers = [
     ],
     cta: 'Start Free Trial',
     ctaStyle: 'outline' as const,
+    ctaHref: GITHUB,
     popular: false,
   },
   {
@@ -107,6 +111,7 @@ const tiers = [
     ],
     cta: 'Contact Sales',
     ctaStyle: 'outline' as const,
+    ctaHref: 'mailto:contact@isocortex.com',
     popular: false,
   },
 ];
@@ -125,7 +130,7 @@ export function Pricing() {
             <span className="gradient-text">Pricing</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start free with the open-source CLI. Upgrade when you need a web interface,
+            Start free with the open-source edition. Upgrade when you need a web interface,
             team features, or enterprise compliance.
           </p>
         </div>
@@ -165,16 +170,23 @@ export function Pricing() {
                 </div>
               </div>
 
-              <Button
-                className={`w-full mb-6 ${
-                  tier.ctaStyle === 'default'
-                    ? 'bg-iso-gold hover:bg-iso-gold-light text-background font-semibold'
-                    : 'border-border/50 hover:bg-secondary/50 hover:border-iso-purple/40'
-                }`}
-                variant={tier.ctaStyle}
+              <a
+                href={tier.ctaHref}
+                target={tier.ctaHref.startsWith('http') ? '_blank' : undefined}
+                rel={tier.ctaHref.startsWith('http') ? 'noopener noreferrer' : undefined}
+                className="w-full mb-6"
               >
-                {tier.cta}
-              </Button>
+                <Button
+                  className={`w-full ${
+                    tier.ctaStyle === 'default'
+                      ? 'bg-iso-gold hover:bg-iso-gold-light text-background font-semibold'
+                      : 'border-border/50 hover:bg-secondary/50 hover:border-iso-purple/40'
+                  }`}
+                  variant={tier.ctaStyle}
+                >
+                  {tier.cta}
+                </Button>
+              </a>
 
               <ul className="space-y-2.5 flex-1">
                 {tier.features.map((feature) => (

@@ -18,6 +18,9 @@ venv/
 env/
 ENV/
 
+# --- PyInstaller ---
+*.spec
+
 # --- Testing / Coverage ---
 htmlcov/
 .coverage
@@ -43,6 +46,7 @@ docs/*.toc
 docs/*.lof
 docs/*.lot
 docs/*.synctex.gz
+docs/*.pdf
 docs/*.out
 docs/*.fls
 docs/*.fdb_latexmk
@@ -52,10 +56,8 @@ docs/*.fdb_latexmk
 *.obj
 *.a
 *.lib
-*.so
 *.dylib
 *.dll
-*.exe
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
@@ -94,9 +96,11 @@ Desktop.ini
 # --- Docker ---
 docker-compose.override.yml
 
+# --- Dev-only ---
+worklog.md
+
 # --- Misc ---
 *.log
 *.tmp
 *.bak
-*.swp
 npm-debug.log*

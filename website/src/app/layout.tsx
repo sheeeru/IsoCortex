@@ -45,6 +45,9 @@ export const metadata: Metadata = {
     description:
       "Sub-millisecond semantic search. 100% local. Zero cloud.",
   },
+  referrer: 'strict-origin-when-cross-origin',
+  robots: { index: true, follow: true },
+  metadataBase: new URL('https://isocortex.dev'),
 };
 
 export default function RootLayout({

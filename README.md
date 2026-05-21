@@ -25,6 +25,8 @@ docker-compose up -d
 # Web UI at http://localhost:3000 — API at http://localhost:8900
 ```
 
+**Desktop App?** IsoCortex also ships as a downloadable desktop application (like Discord/Spotify). Customers install it with one click — no terminal, no Docker, no developer tools needed. See [`project/desktop/README.md`](project/desktop/README.md).
+
 ---
 
 ## Repository Structure
@@ -33,7 +35,7 @@ This repository contains three main components:
 
 ```
 isocortex/
-├── project/          ← Core application (API, engine, dashboard, CLI, Docker)
+├── project/          ← Core application (API, engine, dashboard, CLI, Docker, Desktop)
 ├── website/          ← Marketing landing page (Next.js)
 └── docs/             ← Software Requirements Specification (LaTeX)
 ```
@@ -52,12 +54,15 @@ The main IsoCortex application: C++17 HNSW search engine, FastAPI backend, Next.
 | Database | SQLite (users, tokens, analytics) |
 | CLI | Click-based command-line interface |
 | Containerization | Docker + docker-compose |
+| Desktop App | Electron + PyInstaller (Windows/Mac/Linux installers) |
 
 **Quick start:** See [`project/README.md`](project/README.md) for full installation, API examples, architecture diagram, configuration, and development guide.
 
 ```bash
 cd project
-docker-compose up -d          # Start API + Dashboard
+docker-compose up -d          # Start API + Dashboard (Docker)
+# OR build the desktop app:
+bash scripts/build_all.sh     # Build downloadable installer
 pytest tests/ -v              # Run tests
 npm test --prefix web         # Run frontend tests
 ```

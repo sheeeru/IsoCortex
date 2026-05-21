@@ -48,9 +48,9 @@ const features = [
   },
   {
     icon: Terminal,
-    title: 'Full CLI',
-    description: '15 commands for complete control: create, search, update, list, delete, add, remove, serve, web, benchmark, validate, export, import, and auth.',
-    tags: ['15 Commands', 'Pipeline Control'],
+    title: 'Desktop & Web Interface',
+    description: 'Search through your documents using a clean web dashboard or command line. No complex setup required — point IsoCortex at any folder and start searching in minutes.',
+    tags: ['Web Dashboard', 'CLI Access', 'Easy Setup'],
   },
   {
     icon: Globe,

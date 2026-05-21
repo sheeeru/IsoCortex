@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Github, Star, Users, Zap } from 'lucide-react';
+import { ArrowRight, Github, Star, Users, Zap, ShieldCheck } from 'lucide-react';
 
 export function CTA() {
   return (
@@ -37,7 +37,7 @@ export function CTA() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://github.com"
+                href="https://github.com/sheeeru/IsoCortex"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -65,11 +65,11 @@ export function CTA() {
             <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-iso-purple" />
-                <span>Built for developers, by developers</span>
+                <span>Built for teams, by engineers</span>
               </div>
               <div className="w-px h-4 bg-border" />
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-iso-gold" />
+                <ShieldCheck className="w-4 h-4 text-iso-gold" />
                 <span>Zero cloud dependency</span>
               </div>
             </div>
@@ -80,20 +80,3 @@ export function CTA() {
   );
 }
 
-function Shield({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}

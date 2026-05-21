@@ -13,7 +13,7 @@ const footerLinks = {
   ],
   Resources: [
     { label: 'Documentation', href: '#' },
-    { label: 'GitHub Repository', href: '#' },
+    { label: 'GitHub Repository', href: 'https://github.com/sheeeru/IsoCortex' },
     { label: 'PyPI Package', href: '#' },
     { label: 'Docker Hub', href: '#' },
     { label: 'Contributing Guide', href: '#' },
@@ -52,21 +52,28 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3">
               <a
-                href="https://github.com"
+                href="https://github.com/sheeeru/IsoCortex"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="IsoCortex on GitHub"
                 className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-iso-gold hover:border-iso-gold/30 transition-colors"
               >
                 <Github className="w-4 h-4" />
               </a>
               <a
                 href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow IsoCortex on Twitter"
                 className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-iso-gold hover:border-iso-gold/30 transition-colors"
               >
                 <Twitter className="w-4 h-4" />
               </a>
               <a
                 href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Contact IsoCortex via email"
                 className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-iso-gold hover:border-iso-gold/30 transition-colors"
               >
                 <Mail className="w-4 h-4" />

@@ -54,10 +54,10 @@ export function Hero() {
 
           <div className="mt-16 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 animate-fade-in animation-delay-600" style={{ opacity: 0 }}>
             {[
-              { icon: Shield, label: 'GDPR Compliant' },
+              { icon: Shield, label: 'GDPR & HIPAA' },
               { icon: Zap, label: 'Sub-ms Search' },
               { icon: Database, label: '20+ Formats' },
-              { icon: Cpu, label: 'SIMD Accelerated' },
+              { icon: Cpu, label: 'Fast Search' },
               { icon: Lock, label: 'Zero Cloud' },
               { icon: Wifi, label: 'Offline Ready' },
             ].map((item) => (
@@ -87,7 +87,7 @@ export function Hero() {
               </div>
               <div className="text-sm">
                 <span className="text-iso-gold font-semibold">Open Source</span>
-                <span className="text-muted-foreground"> &middot; Built by students, for everyone</span>
+                <span className="text-muted-foreground"> &middot; Built for teams and organizations</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,16 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+
+function sanitizeForDisplay(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -166,6 +176,8 @@ export function Demo() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="pl-10 pr-4 h-12 bg-secondary/50 border-border/50 focus:border-iso-purple/50 text-base"
+                  maxLength={200}
+                  autoComplete="off"
                 />
                 <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-iso-gold/50" />
               </div>
@@ -344,7 +356,7 @@ export function Demo() {
               <pre className="text-[11px] font-mono text-muted-foreground overflow-x-auto max-h-32">
 {`POST /api/v1/indexes/default/search`}
 {`{`}
-{`  "query": "${query}",`}
+{`  "query": "${sanitizeForDisplay(query)}",`}
 {`  "index": "default",`}
 {`  "k": ${results.length},`}
 {`  "elapsed_ms": ${(elapsed * 1000).toFixed(0)},`}

@@ -5,6 +5,9 @@ import { Hero } from '../../components/hero';
 import { Features } from '../../components/features';
 import { HowItWorks } from '../../components/architecture';
 import { Demo } from '../../components/demo';
+import { Benchmarks } from '../../components/benchmarks';
+import { Comparison } from '../../components/comparison';
+import { Testimonials } from '../../components/testimonials';
 import { Pricing } from '../../components/pricing';
 import { ApiPreview } from '../../components/api-preview';
 import { CTA } from '../../components/cta';
@@ -22,6 +25,12 @@ export default function Home() {
         <HowItWorks />
         <div className="section-divider mx-auto max-w-5xl" />
         <Demo />
+        <div className="section-divider mx-auto max-w-5xl" />
+        <Benchmarks />
+        <div className="section-divider mx-auto max-w-5xl" />
+        <Comparison />
+        <div className="section-divider mx-auto max-w-5xl" />
+        <Testimonials />
         <div className="section-divider mx-auto max-w-5xl" />
         <Pricing />
         <div className="section-divider mx-auto max-w-5xl" />

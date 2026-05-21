@@ -63,7 +63,7 @@ export function Navbar() {
 
           <div className="hidden lg:flex items-center gap-3">
             <a
-              href="https://github.com"
+              href="https://github.com/sheeeru/IsoCortex"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -112,7 +112,7 @@ export function Navbar() {
                 </div>
                 <div className="p-6 border-t border-border/50 flex flex-col gap-3">
                   <a
-                    href="https://github.com"
+                    href="https://github.com/sheeeru/IsoCortex"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm border border-border rounded-lg hover:bg-secondary/50 transition-colors"
