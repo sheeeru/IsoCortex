@@ -18,9 +18,6 @@ venv/
 env/
 ENV/
 
-# --- PyInstaller ---
-*.spec
-
 # --- Testing / Coverage ---
 htmlcov/
 .coverage
@@ -63,6 +60,9 @@ CMakeFiles/
 CMakeCache.txt
 *.dSYM/
 
+# --- PyInstaller ---
+*.spec
+
 # --- IsoCortex data (never commit user data) ---
 .isocortex/
 *.bin
@@ -96,7 +96,7 @@ Desktop.ini
 # --- Docker ---
 docker-compose.override.yml
 
-# --- Dev-only ---
+# --- Dev-only (not for production) ---
 worklog.md
 
 # --- Misc ---
