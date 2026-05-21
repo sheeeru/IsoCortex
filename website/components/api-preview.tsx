@@ -131,7 +131,9 @@ export function ApiPreview() {
   const [activeTab, setActiveTab] = useState('cli');
 
   const copyCode = (id: string, code: string) => {
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(code).catch(() => {
+      // Clipboard API may fail in non-HTTPS contexts — silent fallback
+    });
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -245,7 +247,7 @@ export function ApiPreview() {
                 { icon: Cpu, label: 'C++17 + CMake', desc: 'HNSW engine + SIMD' },
                 { icon: Layers, label: 'pybind11', desc: 'C++ ↔ Python bridge' },
                 { icon: Globe, label: 'FastAPI + Uvicorn', desc: 'REST API server' },
-                { icon: Search, label: 'sentence-transformers', desc: 'Local embeddings' },
+                { icon: Search, label: 'ONNX Runtime', desc: 'Local embeddings' },
                 { icon: Shield, label: 'python-jose', desc: 'JWT authentication' },
                 { icon: BarChart3, label: 'SQLite (WAL)', desc: 'Analytics storage' },
                 { icon: Container, label: 'Docker + Compose', desc: 'Single-command deploy' },

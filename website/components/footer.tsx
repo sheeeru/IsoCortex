@@ -9,23 +9,23 @@ const footerLinks = {
     { label: 'Live Demo', href: '#demo' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'API Reference', href: '#api' },
-    { label: 'Changelog', href: '#' },
+    { label: 'Changelog', href: '', disabled: true },
   ],
   Resources: [
-    { label: 'Documentation', href: '#' },
+    { label: 'Documentation', href: '', disabled: true },
     { label: 'GitHub Repository', href: 'https://github.com/sheeeru/IsoCortex' },
-    { label: 'PyPI Package', href: '#' },
-    { label: 'Docker Hub', href: '#' },
-    { label: 'Contributing Guide', href: '#' },
-    { label: 'SRS Document', href: '#' },
+    { label: 'PyPI Package', href: '', disabled: true },
+    { label: 'Docker Hub', href: '', disabled: true },
+    { label: 'Contributing Guide', href: '', disabled: true },
+    { label: 'SRS Document', href: '', disabled: true },
   ],
   Company: [
-    { label: 'About', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Contact', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'License (MIT)', href: '#' },
+    { label: 'About', href: '', disabled: true },
+    { label: 'Blog', href: '', disabled: true },
+    { label: 'Contact', href: '', disabled: true },
+    { label: 'Privacy Policy', href: '', disabled: true },
+    { label: 'Terms of Service', href: '', disabled: true },
+    { label: 'License (MIT)', href: 'https://github.com/sheeeru/IsoCortex/blob/main/LICENSE' },
   ],
 };
 
@@ -62,17 +62,16 @@ export function Footer() {
               </a>
               <a
                 href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Follow IsoCortex on Twitter"
-                className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-iso-gold hover:border-iso-gold/30 transition-colors"
+                aria-label="Follow IsoCortex on Twitter (coming soon)"
+                className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground/40 cursor-not-allowed"
+                aria-disabled="true"
+                tabIndex={-1}
+                onClick={(e: React.MouseEvent) => e.preventDefault()}
               >
                 <Twitter className="w-4 h-4" />
               </a>
               <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:contact@isocortex.dev"
                 aria-label="Contact IsoCortex via email"
                 className="w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-iso-gold hover:border-iso-gold/30 transition-colors"
               >
@@ -88,8 +87,9 @@ export function Footer() {
                 {links.map((link) => (
                   <li key={link.label}>
                     <a
-                      href={link.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      href={'disabled' in link ? undefined : link.href}
+                      className={`text-sm transition-colors ${'disabled' in link ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                      {...('disabled' in link && { 'aria-disabled': true, tabIndex: -1, onClick: (e: React.MouseEvent) => e.preventDefault() })}
                     >
                       {link.label}
                     </a>

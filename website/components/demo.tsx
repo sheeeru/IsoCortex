@@ -143,7 +143,9 @@ export function Demo() {
   );
 
   const copyCommand = () => {
-    navigator.clipboard.writeText(`ic search work-docs "${query}"`);
+    navigator.clipboard.writeText(`ic search work-docs "${query}"`).catch(() => {
+      // Clipboard API may fail in non-HTTPS contexts — silent fallback
+    });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

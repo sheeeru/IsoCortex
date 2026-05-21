@@ -1,5 +1,3 @@
-'use client';
-
 import { Check, X, Minus, Zap, Trophy, ArrowDown } from 'lucide-react';
 
 type CellValue =

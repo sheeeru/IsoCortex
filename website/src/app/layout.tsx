@@ -47,7 +47,8 @@ export const metadata: Metadata = {
   },
   referrer: 'strict-origin-when-cross-origin',
   robots: { index: true, follow: true },
-  metadataBase: new URL('https://isocortex.dev'),
+  // TODO: Update this to your actual domain once purchased
+  metadataBase: new URL('isocortex-q0tn5fkr9-iso-cortex-s-projects.vercel.app'),
 };
 
 export default function RootLayout({

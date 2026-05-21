@@ -1,5 +1,3 @@
-'use client';
-
 import {
   FileText,
   Brain,
@@ -25,8 +23,8 @@ const features = [
   {
     icon: Brain,
     title: 'Neural Embeddings',
-    description: '384-dimensional vectors via all-MiniLM-L6-v2. All inference runs locally with zero network calls. Configurable batching for optimal throughput.',
-    tags: ['all-MiniLM-L6-v2', '384-dim', 'Local Inference'],
+    description: '384-dimensional vectors via all-MiniLM-L6-v2, powered by ONNX Runtime. All inference runs locally with zero network calls and no GPU required. Lightweight ~100MB runtime footprint.',
+    tags: ['ONNX Runtime', '384-dim', 'Local Inference'],
   },
   {
     icon: Layers,

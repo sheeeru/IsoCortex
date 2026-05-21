@@ -1,5 +1,3 @@
-'use client';
-
 import { ArrowRight, Database, Cpu, Search, FileOutput } from 'lucide-react';
 
 const steps = [
@@ -17,8 +15,8 @@ const steps = [
     number: '02',
     icon: Cpu,
     title: 'Chunk & Embed',
-    description: 'Text is split at sentence boundaries into ~120-word chunks with 25-30% overlap. Each chunk is vectorized locally into 384-dim embeddings via all-MiniLM-L6-v2.',
-    tech: ['Sentence-Aware Chunker', 'Local Embedder'],
+    description: 'Text is split at sentence boundaries into ~120-word chunks with 25-30% overlap. Each chunk is vectorized locally into 384-dim embeddings via all-MiniLM-L6-v2 running on ONNX Runtime.',
+    tech: ['Sentence-Aware Chunker', 'ONNX Embedder'],
     color: 'text-iso-gold',
     borderColor: 'border-iso-gold/30',
     bgColor: 'bg-iso-gold/10',
