@@ -73,102 +73,130 @@ def model_exists() -> bool:
     return MODEL_PATH.exists() and MODEL_PATH.stat().st_size > 100_000_000
 
 
-def download_model(
+def _download_file_via_requests(
+    url: str,
+    dest_path: Path,
     on_progress: Optional[Callable[[int, int, str], None]] = None,
+    label: str = "file",
+    max_retries: int = 3,
 ) -> Path:
     """
-    Download the GGUF model from HuggingFace.
-
-    Args:
-        on_progress: Callback(downloaded_bytes, total_bytes, status_text)
-
-    Returns:
-        Path to the downloaded model file.
-
-    Raises:
-        RuntimeError if download fails.
+    Download a file from *url* to *dest_path* using requests.
+    Retries up to *max_retries* times.  Never uses hf_hub_download
+    (which has a known Windows crash: 'NoneType has no attribute write').
     """
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
 
-    logger.info("Downloading model: %s/%s", MODEL_REPO, MODEL_FILE)
+    for attempt in range(1, max_retries + 1):
+        # Clean leftover temp from previous attempt
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
 
-    try:
-        from huggingface_hub import hf_hub_download
-    except ImportError:
-        raise RuntimeError(
-            "huggingface_hub is required for model download. "
-            "Install it with: pip install huggingface_hub"
-        )
+        resp = None
+        try:
+            if on_progress:
+                on_progress(0, 1, f"Connecting... (attempt {attempt}/{max_retries})")
 
-    downloaded_path = hf_hub_download(
-        repo_id=MODEL_REPO,
-        filename=MODEL_FILE,
-        local_dir=str(MODELS_DIR),
-        local_dir_use_symlinks=False,  # type: ignore[arg-type]
-    )
+            resp = requests.get(url, stream=True, timeout=120, allow_redirects=True)
+            resp.raise_for_status()
 
-    # huggingface_hub may download to a blob path; move to expected name
-    downloaded = Path(downloaded_path)
-    if downloaded.name != MODEL_FILE:
-        target = MODELS_DIR / MODEL_FILE
-        if not target.exists():
-            downloaded.rename(target)
-            downloaded = target
+            total_size = int(resp.headers.get("content-length", 0))
+            downloaded = 0
 
-    logger.info("Model downloaded to: %s", downloaded)
-    return downloaded
+            if on_progress:
+                if total_size > 0:
+                    total_mb = total_size / (1024 * 1024)
+                    on_progress(0, 1, f"Downloading {label} (~{total_mb:.0f} MB)...")
+                else:
+                    on_progress(0, 1, f"Downloading {label}...")
+
+            with open(tmp_path, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if on_progress:
+                            if total_size > 0:
+                                on_progress(downloaded, total_size, f"Downloading {label}...")
+                            else:
+                                mb = downloaded / (1024 * 1024)
+                                on_progress(downloaded, downloaded + 1, f"Downloading {label}... {mb:.0f} MB")
+
+            resp.close()
+            resp = None
+
+            # Verify
+            actual_size = tmp_path.stat().st_size
+            if total_size > 0 and actual_size < total_size * 0.95:
+                logger.warning(
+                    "%s: incomplete on attempt %d — got %d / %d bytes",
+                    label, attempt, actual_size, total_size,
+                )
+                if attempt < max_retries:
+                    continue
+                raise RuntimeError(
+                    f"Download incomplete after {max_retries} attempts: "
+                    f"got {actual_size:,} of {total_size:,} bytes"
+                )
+
+            # Atomic replace
+            if dest_path.exists():
+                dest_path.unlink()
+            tmp_path.rename(dest_path)
+
+            logger.info("Downloaded %s → %s (%d bytes)", label, dest_path, actual_size)
+            return dest_path
+
+        except Exception as exc:
+            if resp is not None:
+                try:
+                    resp.close()
+                except Exception:
+                    pass
+                resp = None
+
+            logger.warning("%s: attempt %d/%d failed: %s", label, attempt, max_retries, exc)
+
+            try:
+                if tmp_path.exists():
+                    tmp_path.unlink()
+            except OSError:
+                pass
+
+            if attempt == max_retries:
+                raise RuntimeError(
+                    f"Failed to download {label} after {max_retries} attempts. "
+                    f"Last error: {exc}"
+                )
+
+    raise RuntimeError(f"Download of {label} failed unexpectedly.")
 
 
 def download_model_with_progress(
     on_progress: Optional[Callable[[int, int, str], None]] = None,
 ) -> Path:
     """
-    Download with manual progress tracking using requests.
-    Falls back to hf_hub_download if requests fails.
+    Download the GGUF model with progress tracking.
+    Uses direct HTTP (requests) with retries — does NOT use hf_hub_download
+    which has a known Windows file-handle crash.
     """
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        import requests  # noqa: F401
+    except ImportError:
+        raise RuntimeError(
+            "The 'requests' library is required for model download but is not installed."
+        )
 
     url = f"{_HF_BASE}/{MODEL_REPO}/resolve/main/{MODEL_FILE}"
-
-    try:
-        import requests
-
-        if on_progress:
-            on_progress(0, 1, "Connecting to HuggingFace...")
-
-        resp = requests.get(url, stream=True, timeout=30)
-        resp.raise_for_status()
-
-        total_size = int(resp.headers.get("content-length", 0))
-        if total_size == 0:
-            # Unknown size — fall back to hf_hub_download
-            logger.warning("Unknown content-length, falling back to hf_hub_download")
-            if on_progress:
-                on_progress(0, 1, "Downloading (size unknown)...")
-            return download_model(on_progress)
-
-        downloaded = 0
-        tmp_path = MODELS_DIR / f"{MODEL_FILE}.tmp"
-
-        with open(tmp_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if on_progress:
-                        on_progress(downloaded, total_size, "Downloading model...")
-
-        # Atomic replace
-        os.replace(str(tmp_path), str(MODEL_PATH))
-
-        logger.info("Model downloaded to: %s (%d bytes)", MODEL_PATH, total_size)
-        return MODEL_PATH
-
-    except Exception as exc:
-        logger.warning("Requests download failed (%s), falling back to hf_hub_download", exc)
-        if on_progress:
-            on_progress(0, 1, "Downloading via HuggingFace Hub...")
-        return download_model(on_progress)
+    return _download_file_via_requests(
+        url, MODEL_PATH,
+        on_progress=on_progress,
+        label="AI model",
+    )
 
 
 def _detect_gpu_layers() -> int:

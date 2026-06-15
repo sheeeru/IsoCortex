@@ -111,6 +111,7 @@ if __name__ == "__main__":
 
         download_done = threading.Event()
         download_error: list[str | None] = [None]
+        retry_btn: list = [None]
 
         def _progress_cb(downloaded: int, total: int, text: str):
             if total > 1:
@@ -131,10 +132,24 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
+        def _start_download():
+            if retry_btn[0] is not None:
+                try:
+                    retry_btn[0].pack_forget()
+                except Exception:
+                    pass
+                retry_btn[0] = None
+            progress.set(0)
+            status_label.configure(text="Preparing download...", text_color="#505068")
+            download_error[0] = None
+            download_done.clear()
+            t = threading.Thread(target=_download_thread, daemon=True)
+            t.start()
+
         def _download_thread():
             try:
                 download_model_with_progress(on_progress=_progress_cb)
-                dl_root.after(0, lambda: _finish_download())
+                dl_root.after(0, _finish_download)
             except Exception as exc:
                 captured_exc = str(exc)
                 download_error[0] = captured_exc
@@ -149,19 +164,29 @@ if __name__ == "__main__":
             download_done.set()
             dl_root.after(1500, dl_root.destroy)
 
-        def _fail_download(exc):
+        def _fail_download(error_msg):
             try:
                 status_label.configure(
-                    text=f"Download failed: {exc}",
+                    text=f"Download failed: {error_msg}",
                     text_color="#ef4444",
                 )
+                btn = ctk.CTkButton(
+                    frame,
+                    text="Retry Download",
+                    font=("Segoe UI", 12),
+                    width=200,
+                    height=36,
+                    fg_color="#7c3aed",
+                    hover_color="#6d28d9",
+                    command=_start_download,
+                )
+                btn.pack(pady=(16, 0))
+                retry_btn[0] = btn
             except Exception:
                 pass
             download_done.set()
 
-        # Start download in background
-        t = threading.Thread(target=_download_thread, daemon=True)
-        t.start()
+        _start_download()
 
         dl_root.mainloop()
 
@@ -247,6 +272,21 @@ if __name__ == "__main__":
 
         emb_done = threading.Event()
         emb_error: list[str | None] = [None]
+        emb_retry_btn: list = [None]
+
+        def _start_emb_download():
+            if emb_retry_btn[0] is not None:
+                try:
+                    emb_retry_btn[0].pack_forget()
+                except Exception:
+                    pass
+                emb_retry_btn[0] = None
+            emb_done.clear()
+            emb_error[0] = None
+            emb_status.configure(text="Downloading...", text_color="#505068")
+            _spin()
+            t = threading.Thread(target=_emb_download_thread, daemon=True)
+            t.start()
 
         def _emb_download_thread():
             try:
@@ -254,7 +294,7 @@ if __name__ == "__main__":
                     captured = status_text
                     emb_root.after(0, lambda: _update_emb(captured))
                 download_embedding_model(on_progress=_cb)
-                emb_root.after(0, lambda: _finish_emb())
+                emb_root.after(0, _finish_emb)
             except Exception as exc:
                 captured_exc = str(exc)
                 emb_error[0] = captured_exc
@@ -275,19 +315,29 @@ if __name__ == "__main__":
             emb_done.set()
             emb_root.after(1500, emb_root.destroy)
 
-        def _fail_emb(exc):
+        def _fail_emb(error_msg):
             try:
                 emb_status.configure(
-                    text=f"Embedding download failed: {exc}",
+                    text=f"Embedding download failed: {error_msg}",
                     text_color="#ef4444",
                 )
+                btn = ctk.CTkButton(
+                    frame,
+                    text="Retry Download",
+                    font=("Segoe UI", 12),
+                    width=200,
+                    height=36,
+                    fg_color="#7c3aed",
+                    hover_color="#6d28d9",
+                    command=_start_emb_download,
+                )
+                btn.pack(pady=(16, 0))
+                emb_retry_btn[0] = btn
             except Exception:
                 pass
             emb_done.set()
 
-        _spin()
-        t = threading.Thread(target=_emb_download_thread, daemon=True)
-        t.start()
+        _start_emb_download()
         emb_root.mainloop()
 
         if emb_error[0]:

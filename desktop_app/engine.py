@@ -87,6 +87,9 @@ def download_embedding_model(
         - model.onnx  (the ONNX embedding model, ~90 MB)
         - tokenizer.json  (the HuggingFace tokenizer)
 
+    Uses direct HTTP via requests — does NOT use hf_hub_download
+    (which has a known Windows crash: 'NoneType has no attribute write').
+
     Args:
         on_progress: Callback(status_text) for UI feedback.
 
@@ -105,51 +108,44 @@ def download_embedding_model(
         return EMBEDDING_MODEL_DIR
 
     try:
-        from huggingface_hub import hf_hub_download
+        import requests as _req  # noqa: F401
     except ImportError:
         raise RuntimeError(
-            "huggingface_hub is required for model download. "
-            "Install with: pip install huggingface_hub"
+            "The 'requests' library is required for model download but is not installed."
         )
 
-    repo_id = "sentence-transformers/all-MiniLM-L6-v2"
+    from desktop_app.llm import _download_file_via_requests
 
-    # Download ONNX model
+    _HF = "https://huggingface.co"
+    _REPO = "sentence-transformers/all-MiniLM-L6-v2"
+
+    # Download ONNX model (~90 MB)
     if on_progress:
         on_progress("Downloading embedding model (model.onnx)...")
-    onnx_path = hf_hub_download(
-        repo_id=repo_id,
-        filename="onnx/model.onnx",
-        local_dir=str(EMBEDDING_MODEL_DIR),
-        local_dir_use_symlinks=False,  # type: ignore[arg-type]
-    )
-    # Move from subfolder if needed
-    downloaded_onnx = Path(onnx_path)
-    target_onnx = EMBEDDING_MODEL_DIR / "model.onnx"
-    if downloaded_onnx != target_onnx and not target_onnx.exists():
-        downloaded_onnx.rename(target_onnx)
+    onnx_url = f"{_HF}/{_REPO}/resolve/main/onnx/model.onnx"
+    onnx_target = EMBEDDING_MODEL_DIR / "model.onnx"
 
-    # Download tokenizer
+    def _onnx_progress(downloaded: int, total: int, text: str):
+        if on_progress:
+            mb = downloaded / (1024 * 1024)
+            if total > 1:
+                total_mb = total / (1024 * 1024)
+                on_progress(f"Downloading model.onnx... {mb:.0f}/{total_mb:.0f} MB")
+            else:
+                on_progress(f"Downloading model.onnx... {mb:.0f} MB")
+
+    _download_file_via_requests(
+        onnx_url, onnx_target,
+        on_progress=_onnx_progress,
+        label="model.onnx",
+    )
+
+    # Download tokenizer.json (~466 KB)
     if on_progress:
         on_progress("Downloading tokenizer...")
-    tok_path = hf_hub_download(
-        repo_id=repo_id,
-        filename="tokenizer.json",
-        local_dir=str(EMBEDDING_MODEL_DIR),
-        local_dir_use_symlinks=False,  # type: ignore[arg-type]
-    )
-    downloaded_tok = Path(tok_path)
-    target_tok = EMBEDDING_MODEL_DIR / "tokenizer.json"
-    if downloaded_tok != target_tok and not target_tok.exists():
-        downloaded_tok.rename(target_tok)
-
-    # Cleanup empty subdirectories created by hf_hub_download
-    for sub in (EMBEDDING_MODEL_DIR / "onnx",):
-        if sub.is_dir():
-            try:
-                sub.rmdir()
-            except OSError:
-                pass
+    tok_url = f"{_HF}/{_REPO}/resolve/main/tokenizer.json"
+    tok_target = EMBEDDING_MODEL_DIR / "tokenizer.json"
+    _download_file_via_requests(tok_url, tok_target, label="tokenizer.json")
 
     logger.info("Embedding model downloaded to: %s", EMBEDDING_MODEL_DIR)
     if on_progress:
