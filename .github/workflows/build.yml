@@ -20,7 +20,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
-          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet
+          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet requests huggingface_hub
 
       - name: Build Windows .exe
         run: |
@@ -55,7 +55,9 @@ jobs:
             --hidden-import=desktop_app.components.preview `
             --collect-all customtkinter `
             --collect-all onnxruntime `
+            --collect-all llama_cpp `
             --collect-data tokenizers `
+            --hidden-import=llama_cpp `
             --paths . `
             desktop_app/main.py
 
@@ -81,7 +83,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
-          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet
+          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet requests huggingface_hub
 
       - name: Build macOS .app
         run: |
@@ -117,7 +119,9 @@ jobs:
             --hidden-import=_posixsubprocess \
             --collect-all customtkinter \
             --collect-all onnxruntime \
+            --collect-all llama_cpp \
             --collect-data tokenizers \
+            --hidden-import=llama_cpp \
             --paths . \
             desktop_app/main.py
 

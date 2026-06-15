@@ -1390,10 +1390,13 @@ class SearchScreen(ctk.CTkFrame):
         if not self._ensure_llm():
             # LLM not ready yet — either loading in background or failed
             if self._llm_loaded and not (self._llm and self._llm.is_loaded):
-                # LLM load already attempted and failed
+                # LLM load already attempted and failed — show REAL error
+                real_err = self._llm.load_error if self._llm else "Unknown error"
                 self._add_error_bubble(
-                    "AI model could not be loaded. Please ensure llama-cpp-python is installed "
-                    "and the model file exists in ~/.isocortex/models/"
+                    f"AI model could not be loaded.\n\n"
+                    f"Error: {real_err}\n\n"
+                    f"Make sure llama-cpp-python is installed and the model file "
+                    f"exists in ~/.isocortex/models/"
                 )
             else:
                 # LLM is loading in background — queue the query
