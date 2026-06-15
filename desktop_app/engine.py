@@ -107,14 +107,7 @@ def download_embedding_model(
             on_progress("Embedding model already present.")
         return EMBEDDING_MODEL_DIR
 
-    try:
-        import requests as _req  # noqa: F401
-    except ImportError:
-        raise RuntimeError(
-            "The 'requests' library is required for model download but is not installed."
-        )
-
-    from desktop_app.llm import _download_file_via_requests
+    from desktop_app.llm import _download_file
 
     _HF = "https://huggingface.co"
     _REPO = "sentence-transformers/all-MiniLM-L6-v2"
@@ -134,7 +127,7 @@ def download_embedding_model(
             else:
                 on_progress(f"Downloading model.onnx... {mb:.0f} MB")
 
-    _download_file_via_requests(
+    _download_file(
         onnx_url, onnx_target,
         on_progress=_onnx_progress,
         label="model.onnx",
@@ -145,7 +138,7 @@ def download_embedding_model(
         on_progress("Downloading tokenizer...")
     tok_url = f"{_HF}/{_REPO}/resolve/main/tokenizer.json"
     tok_target = EMBEDDING_MODEL_DIR / "tokenizer.json"
-    _download_file_via_requests(tok_url, tok_target, label="tokenizer.json")
+    _download_file(tok_url, tok_target, label="tokenizer.json")
 
     logger.info("Embedding model downloaded to: %s", EMBEDDING_MODEL_DIR)
     if on_progress:

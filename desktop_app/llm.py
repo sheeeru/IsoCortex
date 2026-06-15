@@ -73,7 +73,7 @@ def model_exists() -> bool:
     return MODEL_PATH.exists() and MODEL_PATH.stat().st_size > 100_000_000
 
 
-def _download_file_via_requests(
+def _download_file(
     url: str,
     dest_path: Path,
     on_progress: Optional[Callable[[int, int, str], None]] = None,
@@ -81,12 +81,22 @@ def _download_file_via_requests(
     max_retries: int = 3,
 ) -> Path:
     """
-    Download a file from *url* to *dest_path* using requests.
-    Retries up to *max_retries* times.  Never uses hf_hub_download
-    (which has a known Windows crash: 'NoneType has no attribute write').
+    Download a file from *url* to *dest_path*.
+
+    Uses ONLY the Python standard library (urllib) — no ``requests``,
+    no ``huggingface_hub``.  This guarantees the download works inside
+    PyInstaller ``--onefile`` bundles on Windows where third-party packages
+    may not be collected.
+
+    Retries up to *max_retries* times on transient failures.
     """
+    import urllib.request
+    import urllib.error
+    import socket
+
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
+    chunk_size = 65536  # 64 KB
 
     for attempt in range(1, max_retries + 1):
         # Clean leftover temp from previous attempt
@@ -101,10 +111,10 @@ def _download_file_via_requests(
             if on_progress:
                 on_progress(0, 1, f"Connecting... (attempt {attempt}/{max_retries})")
 
-            resp = requests.get(url, stream=True, timeout=120, allow_redirects=True)
-            resp.raise_for_status()
+            req = urllib.request.Request(url, headers={"User-Agent": "IsoCortex/2.0"})
+            resp = urllib.request.urlopen(req, timeout=120)
 
-            total_size = int(resp.headers.get("content-length", 0))
+            total_size = int(resp.headers.get("Content-Length", 0))
             downloaded = 0
 
             if on_progress:
@@ -115,16 +125,18 @@ def _download_file_via_requests(
                     on_progress(0, 1, f"Downloading {label}...")
 
             with open(tmp_path, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=65536):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if on_progress:
-                            if total_size > 0:
-                                on_progress(downloaded, total_size, f"Downloading {label}...")
-                            else:
-                                mb = downloaded / (1024 * 1024)
-                                on_progress(downloaded, downloaded + 1, f"Downloading {label}... {mb:.0f} MB")
+                while True:
+                    chunk = resp.read(chunk_size)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if on_progress:
+                        if total_size > 0:
+                            on_progress(downloaded, total_size, f"Downloading {label}...")
+                        else:
+                            mb = downloaded / (1024 * 1024)
+                            on_progress(downloaded, downloaded + 1, f"Downloading {label}... {mb:.0f} MB")
 
             resp.close()
             resp = None
@@ -159,6 +171,21 @@ def _download_file_via_requests(
                     pass
                 resp = None
 
+            # Classify error — retry on transient issues
+            is_transient = isinstance(exc, (
+                urllib.error.HTTPError,
+                urllib.error.URLError,
+                socket.timeout,
+                TimeoutError,
+                ConnectionResetError,
+                BrokenPipeError,
+                OSError,  # covers Windows disk errors too
+            ))
+            if not is_transient:
+                # Non-transient — don't waste retries
+                logger.error("%s: non-transient error, not retrying: %s", label, exc)
+                raise RuntimeError(f"Download of {label} failed: {exc}") from exc
+
             logger.warning("%s: attempt %d/%d failed: %s", label, attempt, max_retries, exc)
 
             try:
@@ -181,18 +208,10 @@ def download_model_with_progress(
 ) -> Path:
     """
     Download the GGUF model with progress tracking.
-    Uses direct HTTP (requests) with retries — does NOT use hf_hub_download
-    which has a known Windows file-handle crash.
+    Uses Python stdlib urllib only — zero external dependencies.
     """
-    try:
-        import requests  # noqa: F401
-    except ImportError:
-        raise RuntimeError(
-            "The 'requests' library is required for model download but is not installed."
-        )
-
     url = f"{_HF_BASE}/{MODEL_REPO}/resolve/main/{MODEL_FILE}"
-    return _download_file_via_requests(
+    return _download_file(
         url, MODEL_PATH,
         on_progress=on_progress,
         label="AI model",
