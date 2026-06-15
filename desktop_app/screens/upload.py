@@ -8,22 +8,31 @@ Enhanced with theme animations: ShimmerBar, GlassCard, GradientDivider,
 AnimatedPulseGlow, AnimatedGradientBG, FadeInFrame, create_badge.
 """
 
-import threading
 import customtkinter as ctk
+import logging
 from pathlib import Path
 from tkinter import filedialog
+
+logger = logging.getLogger("IsoCortex.upload")
+
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+    _HAS_TKDND = True
+except ImportError:
+    DND_FILES = ""  # type: ignore[assignment]
+    _HAS_TKDND = False
 
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER,
     COLOR_PURPLE, COLOR_PURPLE_DARK, COLOR_PURPLE_LIGHT, COLOR_PURPLE_DEEP,
-    COLOR_GOLD, COLOR_GOLD_LIGHT,
+    COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_BTN_TEXT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
     COLOR_SHADOW,
     FONT_FAMILY, FONT_FAMILY_MONO,
     FONT_SIZE_TITLE, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
-    BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
+    BORDER_RADIUS, BORDER_RADIUS_XS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
     GradientCanvas, GRADIENT_PURPLE_GOLD,
     ShimmerBar, GlassCard, GradientDivider,
@@ -31,6 +40,7 @@ from desktop_app.theme import (
     ANIM_DELAY_200, ANIM_DELAY_400, ANIM_DELAY_600,
     COLOR_GLASS_BG, COLOR_GLASS_BORDER,
 )
+from desktop_app.workers import IngestionWorker, WorkerThread
 
 # ── Extension -> colour mapping for file-row left borders & badges ─────
 _EXT_COLORS: dict[str, str] = {
@@ -94,6 +104,7 @@ class UploadScreen(ctk.CTkFrame):
         self._build_header(master)
         self._build_files_card(master)
         self._build_status_bar(master)
+        self._setup_drag_and_drop()
 
     # ── Header ───────────────────────────────────────────────────────
 
@@ -175,14 +186,14 @@ class UploadScreen(ctk.CTkFrame):
         self._file_count_label.pack(side="right")
 
         # Drop zone
-        drop_border = ctk.CTkFrame(
+        self._drop_border = ctk.CTkFrame(
             inner, fg_color=COLOR_BG_ELEVATED,
             corner_radius=BORDER_RADIUS,
             border_width=2, border_color=COLOR_BORDER_LIGHT,
         )
-        drop_border.pack(fill="x", pady=(0, PADDING_MD))
+        self._drop_border.pack(fill="x", pady=(0, PADDING_MD))
 
-        drop_inner = ctk.CTkFrame(drop_border, fg_color="transparent")
+        drop_inner = ctk.CTkFrame(self._drop_border, fg_color="transparent")
         drop_inner.pack(fill="x", padx=PADDING_LG, pady=PADDING_MD)
 
         icon_text = ctk.CTkFrame(drop_inner, fg_color="transparent")
@@ -213,16 +224,15 @@ class UploadScreen(ctk.CTkFrame):
             drop_inner, text="Browse Files",
             font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
             fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
-            text_color="#0a0a0f",
+            text_color=COLOR_GOLD_BTN_TEXT,
             height=34, width=140,
             corner_radius=BORDER_RADIUS_SM,
             command=self._browse_files,
         ).pack(pady=(PADDING_SM, 0))
 
-        # File list (scrollable, constrained height)
-        list_container = ctk.CTkFrame(inner, fg_color="transparent", height=220)
+        # File list (scrollable, grows with available space)
+        list_container = ctk.CTkFrame(inner, fg_color="transparent")
         list_container.pack(fill="both", expand=True, pady=(0, PADDING))
-        list_container.pack_propagate(False)
 
         self._file_list = ctk.CTkScrollableFrame(
             list_container,
@@ -292,12 +302,106 @@ class UploadScreen(ctk.CTkFrame):
             inner, text="\u25B6  Index Files",
             font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
             fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
-            text_color="#0a0a0f",
+            text_color=COLOR_GOLD_BTN_TEXT,
             height=40, width=150,
             corner_radius=BORDER_RADIUS_SM,
             command=self._start_indexing,
         )
         self._ingest_btn.pack(side="right")
+
+    # ══════════════════════════════════════════════════════════════════
+    #  DRAG & DROP
+    # ══════════════════════════════════════════════════════════════════
+
+    def _setup_drag_and_drop(self) -> None:
+        """Register drag-and-drop handlers on the drop zone.
+
+        Uses tkinterdnd2 when available for native OS DnD.
+        Falls back to basic Tk enter/leave visual feedback only.
+        """
+        if _HAS_TKDND and hasattr(self._drop_border, 'drop_target_register'):
+            try:
+                self._drop_border.drop_target_register(DND_FILES)
+                self._drop_border.dnd_bind('<<DragEnter>>', self._on_drag_enter)
+                self._drop_border.dnd_bind('<<DragLeave>>', self._on_drag_leave)
+                self._drop_border.dnd_bind('<<Drop>>', self._on_drop)
+                return
+            except Exception:
+                pass
+
+        # Fallback: visual hover feedback even without tkdnd
+        # (actual DnD requires tkdnd or OS-level integration)
+        self._drop_border.bind('<Enter>', lambda e: self._on_drag_enter(None))
+        self._drop_border.bind('<Leave>', lambda e: self._on_drag_leave(None))
+
+    def _on_drag_enter(self, event) -> None:
+        """Highlight drop zone when files are dragged over it."""
+        try:
+            self._drop_border.configure(
+                border_color=COLOR_PURPLE,
+                fg_color=COLOR_PURPLE_DARK + "15",  # subtle tint
+            )
+        except Exception:
+            pass
+
+    def _on_drag_leave(self, event) -> None:
+        """Reset drop zone styling when drag leaves."""
+        try:
+            self._drop_border.configure(
+                border_color=COLOR_BORDER_LIGHT,
+                fg_color=COLOR_BG_ELEVATED,
+            )
+        except Exception:
+            pass
+
+    def _on_drop(self, event) -> None:
+        """Handle file drop — parse paths from the DnD event data."""
+        self._on_drag_leave(None)  # reset styling
+
+        if event is None:
+            return
+
+        try:
+            # tkinterdnd2 delivers paths as space-separated string;
+            # paths with spaces are wrapped in {}
+            raw = event.data.strip()
+            paths = self._parse_dnd_paths(raw)
+            if paths:
+                self._selected_files.extend(paths)
+                self._render_file_list()
+                self._update_file_count()
+        except Exception:
+            pass
+
+    @staticmethod
+    def _parse_dnd_paths(raw: str) -> list[str]:
+        """Parse file paths from a tkdnd drop event string.
+
+        Handles both space-separated paths and {}-wrapped paths
+        that contain spaces (Windows/Mac convention).
+        """
+        paths = []
+        i = 0
+        while i < len(raw):
+            if raw[i] == '{':
+                # Find matching closing brace
+                end = raw.find('}', i)
+                if end == -1:
+                    end = len(raw)
+                paths.append(raw[i + 1:end])
+                i = end + 1
+            elif raw[i] == ' ':
+                i += 1
+            else:
+                # Regular token until next space
+                end = raw.find(' ', i)
+                if end == -1:
+                    end = len(raw)
+                token = raw[i:end]
+                if token:  # skip empty tokens
+                    paths.append(token)
+                i = end + 1
+        return [p for p in paths if Path(p).exists()]
 
     # ══════════════════════════════════════════════════════════════════
     #  FILE MANAGEMENT
@@ -397,7 +501,7 @@ class UploadScreen(ctk.CTkFrame):
             hover_color="#3a1515",
             text_color=COLOR_TEXT_DIM,
             width=28, height=28,
-            corner_radius=6,
+            corner_radius=BORDER_RADIUS_XS,
             command=lambda idx=index: self._remove_file(idx),
         ).pack(side="right", padx=(0, PADDING_SM))
 
@@ -440,43 +544,59 @@ class UploadScreen(ctk.CTkFrame):
         except Exception:
             pass
 
-        def _run() -> None:
+        # Use IngestionWorker for proper background thread handling
+        index_name = self._app.engine.ensure_default_index()
+
+        # Pre-load model check in a quick background step
+        def _pre_check():
+            if not self._app.engine.ensure_model():
+                raise RuntimeError(
+                    "Failed to load AI model. Make sure onnxruntime and tokenizers are installed: "
+                    "pip install onnxruntime tokenizers"
+                )
+
+        def _on_pre_check_done(_result):
             try:
-                # Step 1: Tell user we're loading the AI model
-                self.after(0, lambda: self._safe_set_status(
-                    "Loading AI model (first time may download ~90MB)\u2026",
-                    COLOR_PURPLE_LIGHT,
-                ))
-                self.after(0, lambda: self._progress_bar.set(0.05))
-
-                # Auto-create the default index if needed
-                index_name = self._app.engine.ensure_default_index()
-
-                # Step 2: Pre-load the model before indexing
-                if not self._app.engine.ensure_model():
-                    self.after(0, lambda: self._on_ingestion_error(
-                        "Failed to load AI model. Make sure onnxruntime and tokenizers are installed: "
-                        "pip install onnxruntime tokenizers"
-                    ))
-                    return
-
+                # Model loaded, now start the actual ingestion worker
                 self.after(0, lambda: self._safe_set_status(
                     "Model loaded. Indexing files\u2026",
                     COLOR_PURPLE_LIGHT,
                 ))
                 self.after(0, lambda: self._progress_bar.set(0.1))
 
-                # Step 3: Ingest files
-                stats = self._app.engine.ingest_files(
-                    index_name,
-                    self._selected_files[:],
-                    progress_callback=self._update_progress,
+                worker = IngestionWorker(
+                    engine=self._app.engine,
+                    index_name=index_name,
+                    file_paths=self._selected_files[:],
+                    on_progress=self._update_progress,
+                    on_done=self._on_ingestion_complete,
+                    on_error=self._on_ingestion_error,
                 )
-                self.after(0, lambda: self._on_ingestion_complete(stats))
+                worker.set_app_ref(self._app)
+                worker.start()
             except Exception as exc:
-                self.after(0, lambda: self._on_ingestion_error(str(exc)))
+                logger.error("Failed to start ingestion: %s", exc, exc_info=True)
+                self._on_ingestion_error(f"Failed to start indexing: {exc}")
 
-        threading.Thread(target=_run, daemon=True).start()
+        def _on_pre_check_error(exc):
+            captured = str(exc)
+            self.after(0, lambda: self._on_ingestion_error(captured))
+
+        # Show loading message
+        self.after(0, lambda: self._safe_set_status(
+            "Loading AI model (first time may download ~90MB)\u2026",
+            COLOR_PURPLE_LIGHT,
+        ))
+        self.after(0, lambda: self._progress_bar.set(0.05))
+
+        pre_worker = WorkerThread(
+            target=_pre_check,
+            on_success=_on_pre_check_done,
+            on_error=_on_pre_check_error,
+            name="PreCheckWorker",
+        )
+        pre_worker.set_app_ref(self._app)
+        pre_worker.start()
 
     def _update_progress(self, processed: int, total: int, filename: str) -> None:
         frac = processed / max(total, 1)

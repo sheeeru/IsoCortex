@@ -17,30 +17,28 @@ Enhanced with website-inspired animations:
   - Staggered entrance delays matching website animation-delay pattern
 """
 
-import shutil
 import customtkinter as ctk
+import threading
 
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER, COLOR_BG_DARKEST,
     COLOR_PURPLE, COLOR_PURPLE_DARK, COLOR_PURPLE_LIGHT,
-    COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_DIM,
+    COLOR_GOLD, COLOR_GOLD_LIGHT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT, COLOR_ERROR, COLOR_WARNING, COLOR_SUCCESS,
     COLOR_GOLD_BTN_TEXT, COLOR_SHADOW, COLOR_SURFACE_1,
-    FONT_FAMILY, FONT_SIZE_TITLE, FONT_SIZE_HERO, FONT_SIZE_MEDIUM,
+    FONT_FAMILY, FONT_SIZE_TITLE, FONT_SIZE_MEDIUM,
     FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG, BORDER_RADIUS_XL,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
     create_gradient_bar,
     GradientCanvas,
     GRADIENT_PURPLE_GOLD, GRADIENT_HERO_DARK,
-    COLOR_PURPLE_DEEP, COLOR_PURPLE_GLOW,
+    COLOR_PURPLE_DEEP,
     # Enhanced animation imports
     HeroBackground, AnimatedGradientBG, FadeInFrame, ShimmerBar,
     GradientDivider, AnimatedLogo,
     create_badge,
-    stagger_animation,
-    ANIM_DELAY_200, ANIM_DELAY_400, ANIM_DELAY_600, ANIM_DELAY_800,
 )
 
 
@@ -136,13 +134,14 @@ class SetupScreen(ctk.CTkFrame):
         outer = ctk.CTkFrame(self, fg_color="transparent")
         outer.pack(expand=True, fill="both")
 
-        # ── Main card — flat structure, no nested glow/shadow ─────────
+        # ── Main card — constrained width, centered ─────────
         card = FadeInFrame(
             outer,
             fg_color=COLOR_BG_CARD,
             corner_radius=BORDER_RADIUS_XL,
             border_width=1,
             border_color=COLOR_BORDER_LIGHT,
+            width=self.CARD_WIDTH,
         )
         card.pack(expand=True, padx=PADDING_XL, pady=PADDING_LG)
 
@@ -227,8 +226,7 @@ class SetupScreen(ctk.CTkFrame):
                 text=" 100% LOCAL  ·  PRIVATE ",
                 font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
                 text_color=COLOR_GOLD,
-            )
-            badge.winfo_children()[0].place(relx=0.5, rely=0.5, anchor="center")
+            ).place(relx=0.5, rely=0.5, anchor="center")
 
         # ── Separator — GradientDivider ──────────────────────────────
         try:
@@ -239,14 +237,10 @@ class SetupScreen(ctk.CTkFrame):
             sep.pack(fill="x", pady=(0, PADDING_SM))
             sep.pack_propagate(False)
 
-        # ── Form fields with staggered entrance animation ─────────────
-        # Containers for staggered reveal
-        _form_fields = []
-
+        # ── Form fields ──────────────────────────────────────────────────
         # Username
         username_frame = ctk.CTkFrame(inner, fg_color="transparent")
         username_frame.pack(fill="x")
-        _form_fields.append(username_frame)
 
         ctk.CTkLabel(
             username_frame,
@@ -266,7 +260,6 @@ class SetupScreen(ctk.CTkFrame):
         # Email
         email_frame = ctk.CTkFrame(inner, fg_color="transparent")
         email_frame.pack(fill="x")
-        _form_fields.append(email_frame)
 
         ctk.CTkLabel(
             email_frame,
@@ -286,7 +279,6 @@ class SetupScreen(ctk.CTkFrame):
         # Password
         password_frame = ctk.CTkFrame(inner, fg_color="transparent")
         password_frame.pack(fill="x")
-        _form_fields.append(password_frame)
 
         ctk.CTkLabel(
             password_frame,
@@ -332,7 +324,6 @@ class SetupScreen(ctk.CTkFrame):
         # Confirm password
         confirm_frame = ctk.CTkFrame(inner, fg_color="transparent")
         confirm_frame.pack(fill="x")
-        _form_fields.append(confirm_frame)
 
         ctk.CTkLabel(
             confirm_frame,
@@ -410,32 +401,6 @@ class SetupScreen(ctk.CTkFrame):
             command=lambda: self._app.show_screen("login"),
         )
         self._back_to_login_btn.pack(fill="x")
-
-        # ── Staggered entrance animation for form fields ──────────────
-        # Mimics the website's animation-delay-200/400/600/800 pattern
-        try:
-            for idx, field_frame in enumerate(_form_fields):
-                delay = ANIM_DELAY_200 * (idx + 1)  # 200, 400, 600, 800
-                # Hide the field initially, reveal with delay
-                try:
-                    original_fg = field_frame.cget("fg_color")
-                except Exception:
-                    original_fg = "transparent"
-                try:
-                    field_frame.configure(fg_color=COLOR_BG)
-                except Exception:
-                    pass
-
-                def _reveal(frame=field_frame, target_fg=original_fg, d=delay):
-                    def _do_reveal():
-                        try:
-                            frame.configure(fg_color=target_fg)
-                        except Exception:
-                            pass
-                    stagger_animation(frame, delay_ms=d, callback=_do_reveal)
-                _reveal()
-        except Exception:
-            pass
 
         # ── Key bindings ──────────────────────────────────────────────
         self._username_entry.bind("<Return>", lambda e: self._email_entry.focus())
@@ -609,13 +574,14 @@ class LoginScreen(ctk.CTkFrame):
         outer = ctk.CTkFrame(self, fg_color="transparent")
         outer.pack(expand=True, fill="both")
 
-        # ── Main card — flat structure, no nested glow/shadow ─────────
+        # ── Main card — constrained width, centered ─────────
         card = FadeInFrame(
             outer,
             fg_color=COLOR_BG_CARD,
             corner_radius=BORDER_RADIUS_XL,
             border_width=1,
             border_color=COLOR_BORDER_LIGHT,
+            width=self.CARD_WIDTH,
         )
         card.pack(expand=True, padx=PADDING_XL, pady=PADDING_LG)
 
@@ -686,13 +652,10 @@ class LoginScreen(ctk.CTkFrame):
             sep.pack(fill="x", pady=(0, PADDING_MD))
             sep.pack_propagate(False)
 
-        # ── Form fields with staggered entrance animation ─────────────
-        _form_fields = []
-
+        # ── Form fields ──────────────────────────────────────────────────
         # Username / Email
         username_frame = ctk.CTkFrame(inner, fg_color="transparent")
         username_frame.pack(fill="x", pady=(0, PADDING_SM))
-        _form_fields.append(username_frame)
 
         ctk.CTkLabel(
             username_frame,
@@ -712,7 +675,6 @@ class LoginScreen(ctk.CTkFrame):
         # Password
         password_frame = ctk.CTkFrame(inner, fg_color="transparent")
         password_frame.pack(fill="x", pady=(0, 2))
-        _form_fields.append(password_frame)
 
         ctk.CTkLabel(
             password_frame,
@@ -800,32 +762,6 @@ class LoginScreen(ctk.CTkFrame):
         )
         self._reset_btn.pack(fill="x")
 
-        # ── Staggered entrance animation for form fields ──────────────
-        # Mimics the website's animation-delay-200/400 pattern
-        try:
-            for idx, field_frame in enumerate(_form_fields):
-                delay = ANIM_DELAY_200 * (idx + 1)  # 200, 400
-                # Hide the field initially, reveal with delay
-                try:
-                    original_fg = field_frame.cget("fg_color")
-                except Exception:
-                    original_fg = "transparent"
-                try:
-                    field_frame.configure(fg_color=COLOR_BG)
-                except Exception:
-                    pass
-
-                def _reveal(frame=field_frame, target_fg=original_fg, d=delay):
-                    def _do_reveal():
-                        try:
-                            frame.configure(fg_color=target_fg)
-                        except Exception:
-                            pass
-                    stagger_animation(frame, delay_ms=d, callback=_do_reveal)
-                _reveal()
-        except Exception:
-            pass
-
         # ── Bottom gradient accent ─────────────────────────────────────
         try:
             bottom_grad = GradientCanvas(
@@ -890,17 +826,32 @@ class LoginScreen(ctk.CTkFrame):
 
         def do_reset():
             dialog.destroy()
+            # Show "resetting..." state
             try:
-                success = self._app.engine.reset_data()
+                self._reset_btn.configure(text="Resetting...", state="disabled")
+            except Exception:
+                pass
+
+            def _reset_thread():
+                try:
+                    success = self._app.engine.reset_data()
+                except Exception:
+                    success = False
+                # Schedule UI update on main thread
+                self.after(0, lambda: _reset_done(success))
+
+            def _reset_done(success):
                 if success:
                     self._app.show_toast("All data has been reset. Create a new account.", "warning")
                     self._app.show_screen("setup")
                 else:
-                    try: self._error_label.configure(text="Failed to reset data")
-                    except Exception: pass
-            except Exception as exc:
-                try: self._error_label.configure(text=f"Reset error: {exc}")
-                except Exception: pass
+                    try:
+                        self._error_label.configure(text="Failed to reset data")
+                        self._reset_btn.configure(text="Reset Everything (Forgot Password)", state="normal")
+                    except Exception:
+                        pass
+
+            threading.Thread(target=_reset_thread, daemon=True).start()
 
         ctk.CTkButton(
             btn_row,

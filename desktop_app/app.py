@@ -12,6 +12,7 @@ Website-inspired enhancements:
   - Staggered entrance animations on screen transitions
 """
 
+import logging
 import os
 import sys
 import customtkinter as ctk
@@ -26,7 +27,7 @@ from desktop_app.theme import (
     COLOR_GOLD, COLOR_GOLD_LIGHT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
-    COLOR_SUCCESS, COLOR_ERROR,
+    COLOR_SUCCESS, COLOR_ERROR, COLOR_INFO, COLOR_WARNING,
     COLOR_SIDEBAR_BG,
     GRADIENT_PURPLE_GOLD, GRADIENT_SIDEBAR,
     SIDEBAR_WIDTH, BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
@@ -36,6 +37,8 @@ from desktop_app.theme import (
     ShimmerBar, create_badge, _dim_hex,
 )
 from desktop_app.engine import IsoCortexEngine
+
+logger = logging.getLogger("IsoCortex.app")
 
 
 class IsoCortexApp(ctk.CTk):
@@ -48,25 +51,39 @@ class IsoCortexApp(ctk.CTk):
         super().__init__(fg_color=COLOR_BG_DARKEST)
 
         # ── Window configuration ──────────────────────────────────────
-        self.title("IsoCortex — Offline Semantic Search Engine")
+        self.title("IsoCortex")
         self.geometry("1120x720")
-        self.minsize(1060, 700)
+        self.minsize(960, 640)
+        self.maxsize(3840, 2160)
         self.configure(fg_color=COLOR_BG_DARKEST)
 
-        # Set icon if available
-        icon_path = Path(__file__).parent / "assets" / "favicon.png"
-        if not icon_path.exists():
-            icon_path = Path(__file__).parent.parent / "website" / "public" / "favicon.png"
-        if icon_path.exists():
-            try:
-                from PIL import Image
-                icon = Image.open(str(icon_path))
-                self.iconphoto(True, icon)
-            except Exception:
-                pass
+        # ── 4K / HiDPI awareness (Windows + Linux) ────────────────────
+        try:
+            # Windows DPI awareness
+            if sys.platform == "win32":
+                try:
+                    from ctypes import windll
+                    windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE_V2
+                except Exception:
+                    try:
+                        from ctypes import windll
+                        windll.user32.SetProcessDPIAware()
+                    except Exception:
+                        pass
+            # Linux: respect GDK_SCALE / GDK_DPI_SCALE env vars (set by user or DE)
+            # macOS: handled natively by Tk
+        except Exception:
+            pass
+
+        # Set window icon (IsoCortex logo)
+        self._set_app_icon(self)
 
         # ── Initialize engine ─────────────────────────────────────────
         self.engine = IsoCortexEngine()
+
+        # --- Folder Watcher (auto-index) ---
+        self._watcher = None
+        self._init_watcher()
 
         # ── State ─────────────────────────────────────────────────────
         self._current_screen = None
@@ -86,6 +103,81 @@ class IsoCortexApp(ctk.CTk):
             self.show_screen("setup")
         else:
             self.show_screen("login")
+
+    # ── Window icon helper ──────────────────────────────────────────
+
+    @staticmethod
+    def _set_app_icon(window):
+        """Set the IsoCortex logo as the window/dock icon on all platforms."""
+        assets_dir = Path(__file__).parent / "assets"
+        icon_path = assets_dir / "app_icon.png"
+        if not icon_path.exists():
+            icon_path = assets_dir / "isocortex-logo.png"
+        if not icon_path.exists():
+            icon_path = assets_dir / "favicon.png"
+        if not icon_path.exists():
+            return
+
+        # macOS: use AppKit to set the dock icon reliably
+        if sys.platform == "darwin":
+            try:
+                from PIL import Image as _Img
+                _pil_img = _Img.open(str(icon_path)).convert("RGBA")
+                # macOS needs a .icns or NSImage from TIFF data
+                import io
+                _buf = io.BytesIO()
+                _pil_img.save(_buf, format="TIFF")
+                _tiff_data = _buf.getvalue()
+                try:
+                    from AppKit import NSImage, NSData
+                    nsdata = NSData.dataWithBytes_length_(_tiff_data, len(_tiff_data))
+                    nsimage = NSImage.alloc().initWithData_(nsdata)
+                    if nsimage:
+                        from Foundation import NSApplication
+                        NSApplication.sharedApplication().setApplicationIconImage_(nsimage)
+                except ImportError:
+                    pass
+            except Exception:
+                pass
+            # Also set via iconphoto for the title bar
+            try:
+                from PIL import Image
+                img = Image.open(str(icon_path)).convert("RGBA")
+                if img.size[0] > 256:
+                    img = img.resize((256, 256), Image.Resampling.LANCZOS)
+                window.iconphoto(True, img)
+            except Exception:
+                pass
+            return
+
+        # Windows / Linux: iconphoto works fine
+        try:
+            from PIL import Image
+            img = Image.open(str(icon_path)).convert("RGBA")
+            if img.size[0] > 256:
+                img = img.resize((256, 256), Image.Resampling.LANCZOS)
+            window.iconphoto(True, img)
+        except Exception:
+            pass
+
+    def _init_watcher(self):
+        try:
+            from desktop_app.watcher import FolderWatcher
+            watched = self.engine.get_watched_folders()
+            active = [f for f in watched if f.get("is_active")]
+            if active:
+                self._watcher = FolderWatcher(self.engine)
+                for f in active:
+                    try:
+                        self._watcher.add_watch(f["folder_path"], f.get("index_name", "default"))
+                    except Exception:
+                        pass
+                self._watcher.start()
+                logger.info("Started folder watcher with %d active folders", len(active))
+        except ImportError:
+            logger.warning("watchdog not installed — watch folders disabled")
+        except Exception as exc:
+            logger.warning("Failed to start folder watcher: %s", exc)
 
     # ─────────────────────────────────────────────────────────────────
     # Layout
@@ -114,7 +206,7 @@ class IsoCortexApp(ctk.CTk):
             fg_color="transparent",
             corner_radius=0,
         )
-        self._screen_container.pack(fill="both", expand=True, padx=PADDING_XL, pady=PADDING_XL)
+        self._screen_container.pack(fill="both", expand=True)
 
     # ─────────────────────────────────────────────────────────────────
     # Sidebar — Premium Depth-Layered Design
@@ -201,10 +293,10 @@ class IsoCortexApp(ctk.CTk):
 
         ctk.CTkLabel(
             version_badge,
-            text=" v1.0 ",
+            text=" v2.0 ",
             font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
             text_color=COLOR_PURPLE_LIGHT,
-        )
+        ).place(relx=0.5, rely=0.5, anchor="center")
 
         # ── Gradient divider (website: .section-divider) ─────────────
         GradientDivider(sidebar, height=1).pack(fill="x", padx=PADDING)
@@ -226,14 +318,15 @@ class IsoCortexApp(ctk.CTk):
         self._nav_frame.pack(fill="x", padx=PADDING, pady=(0, PADDING_SM))
 
         nav_items = [
-            ("dashboard", "Dashboard",   "D"),
-            ("upload",    "Upload Files", "U"),
-            ("search",    "Search",      "S"),
-            ("settings",  "Settings",    "G"),
+            ("dashboard", "Dashboard"),
+            ("upload",    "Upload Files"),
+            ("search",    "AI Chat"),
+            ("indexes",   "Indexes"),
+            ("settings",  "Settings"),
         ]
 
-        for i, (screen_id, label, icon_letter) in enumerate(nav_items):
-            btn = self._build_nav_button(self._nav_frame, screen_id, label, icon_letter)
+        for i, (screen_id, label) in enumerate(nav_items):
+            btn = self._build_nav_button(self._nav_frame, screen_id, label)
             btn.pack(fill="x", pady=2)
             # Staggered entrance animation delay (website pattern)
             self._nav_frame.after(i * 80, lambda b=btn: self._nav_button_entrance(b))
@@ -346,11 +439,11 @@ class IsoCortexApp(ctk.CTk):
         except Exception:
             pass
 
-    def _build_nav_button(self, parent, screen_id: str, label: str, icon_letter: str) -> ctk.CTkButton:
-        """Create a premium navigation button with icon letter + label."""
+    def _build_nav_button(self, parent, screen_id: str, label: str) -> ctk.CTkButton:
+        """Create a premium navigation button with label."""
         btn = ctk.CTkButton(
             parent,
-            text=f"  {label}",
+            text=f"    {label}",
             font=(FONT_FAMILY, FONT_SIZE_NORMAL),
             fg_color="transparent",
             hover_color=COLOR_BG_HOVER,
@@ -509,12 +602,12 @@ class IsoCortexApp(ctk.CTk):
     def show_toast(self, message: str, toast_type: str = "info") -> None:
         """Show a temporary notification toast."""
         colors = {
-            "info": "#3b82f6",
+            "info": COLOR_INFO,
             "success": COLOR_SUCCESS,
-            "warning": "#f59e0b",
+            "warning": COLOR_WARNING,
             "error": COLOR_ERROR,
         }
-        color = colors.get(toast_type, "#3b82f6")
+        color = colors.get(toast_type, COLOR_INFO)
         from desktop_app.components.toast import ToastNotification
         toast = ToastNotification(
             self._content_frame,

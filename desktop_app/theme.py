@@ -4,14 +4,12 @@ IsoCortex Desktop App — Theme Configuration
 Premium dark & light theme with Canvas gradients, glow effects,
 selectable text helpers, and a purple-gold brand palette.
 
-Website-inspired enhancements:
-  - FloatingWidget: smooth vertical float animation (6s infinite)
+Components:
   - FadeInFrame: gradual opacity fade-in on widget creation
   - ShimmerBar: animated shimmer effect (3s linear infinite)
   - GradientDivider: transparent → purple → gold → transparent divider
   - AnimatedGradientBG: multi-layered radial gradient background canvas
   - GlassCard: glassmorphism card with translucent borders + glow
-  - AnimatedPulseGlow: pulsing glow ring around any widget
   - AnimatedLogo: logo image with hover glow pulse
   - stagger_animation: utility for cascading entrance delays
 
@@ -20,18 +18,17 @@ Performance optimizations:
   - ShimmerBar: uses PIL PhotoImage instead of w create_line calls 33x/sec
   - AnimatedGradientBG: uses PIL ImageDraw for radial gradients, 200ms refresh
   - HeroBackground: caches base blurred image, 250ms refresh with ImageEnhance
-  - AnimatedPulseGlow: reduced refresh to 150ms
-  - AnimatedLogo: replaced AnimatedPulseGlow with static glow frame
 """
 
 import math
 import os
 import tkinter as tk
+from typing import Any, Literal
 
 try:
     import customtkinter as ctk
 except ImportError:
-    ctk = None  # type: ignore
+    ctk = None  # type: ignore[assignment]
 
 # ══════════════════════════════════════════════════════════════════════
 # PIL Availability Check
@@ -109,7 +106,7 @@ def _apply_colors(mode: str):
     global COLOR_BG_HOVER, COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM
     global COLOR_BORDER, COLOR_BORDER_LIGHT, COLOR_GOLD_BTN_TEXT
     global COLOR_SIDEBAR_BG, COLOR_CARD_GLASS, COLOR_INPUT_BG
-    global COLOR_SHADOW, COLOR_SHADOW_LIGHT, COLOR_SURFACE_1, COLOR_SURFACE_2
+    global COLOR_SHADOW, COLOR_SURFACE_1, COLOR_SURFACE_2
     global COLOR_GLASS_BG, COLOR_GLASS_BORDER
 
     if mode == "light":
@@ -128,7 +125,6 @@ def _apply_colors(mode: str):
         COLOR_CARD_GLASS    = "#f8f8ff"
         COLOR_INPUT_BG      = "#f0f0f8"
         COLOR_SHADOW        = "#c0c0d4"
-        COLOR_SHADOW_LIGHT  = "#d8d8e8"
         COLOR_SURFACE_1     = "#f4f4fa"
         COLOR_SURFACE_2     = "#eaeaf4"
         COLOR_GLASS_BG      = "#e8e0f8"
@@ -149,7 +145,6 @@ def _apply_colors(mode: str):
         COLOR_CARD_GLASS    = "#141428"
         COLOR_INPUT_BG      = "#161630"
         COLOR_SHADOW        = "#060610"
-        COLOR_SHADOW_LIGHT  = "#0e0e1c"
         COLOR_SURFACE_1     = "#0f0f1e"
         COLOR_SURFACE_2     = "#14142a"
         COLOR_GLASS_BG      = "#1a1838"
@@ -169,23 +164,16 @@ COLOR_GOLD          = "#d4a017"
 COLOR_GOLD_LIGHT    = "#eab308"
 COLOR_GOLD_DIM      = "#a17e12"
 
-COLOR_TEXT_PURPLE   = "#a78bfa"
-COLOR_TEXT_GOLD     = "#d4a017"
-
 COLOR_SUCCESS       = "#22c55e"
 COLOR_WARNING       = "#f59e0b"
 COLOR_ERROR         = "#ef4444"
 COLOR_INFO          = "#3b82f6"
-
-COLOR_BORDER_FOCUS  = "#7c3aed"
 
 GRADIENT_PURPLE_GOLD = ["#7c3aed", "#d4a017"]
 GRADIENT_SIDEBAR     = ["#0a0520", "#1a0a3e", "#0a0520"]
 GRADIENT_HERO_DARK   = ["#4c1d95", "#7c3aed", "#d4a017"]
 
 # Animation timing constants (from website globals.css)
-ANIM_FLOAT_DURATION    = 6000  # 6s float animation
-ANIM_PULSE_DURATION    = 3000  # 3s pulse-glow animation
 ANIM_SHIMMER_DURATION  = 3000  # 3s shimmer animation
 ANIM_FADEIN_DURATION   = 1000  # 1s fade-in
 
@@ -216,10 +204,9 @@ FONT_SIZE_HERO      = 28
 # ══════════════════════════════════════════════════════════════════════
 
 SIDEBAR_WIDTH       = 260
-WINDOW_MIN_WIDTH    = 1060
-WINDOW_MIN_HEIGHT   = 700
 BORDER_RADIUS       = 12
 BORDER_RADIUS_SM    = 8
+BORDER_RADIUS_XS    = 4   # Tiny action buttons (copy, bookmark, etc.)
 BORDER_RADIUS_LG    = 16
 BORDER_RADIUS_XL    = 20
 PADDING             = 16
@@ -227,7 +214,6 @@ PADDING_SM          = 8
 PADDING_MD          = 12
 PADDING_LG          = 24
 PADDING_XL          = 36
-SHADOW_OFFSET       = 2
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -249,7 +235,6 @@ COLOR_SIDEBAR_BG    = "#0c0c18"
 COLOR_CARD_GLASS    = "#141428"
 COLOR_INPUT_BG      = "#161630"
 COLOR_SHADOW        = "#060610"
-COLOR_SHADOW_LIGHT  = "#0e0e1c"
 COLOR_SURFACE_1     = "#0f0f1e"
 COLOR_SURFACE_2     = "#14142a"
 COLOR_GLASS_BG      = "#1a1838"
@@ -260,7 +245,7 @@ COLOR_GLASS_BORDER  = "#2a2858"
 # Color Utilities
 # ══════════════════════════════════════════════════════════════════════
 
-def _hex_to_rgb(hex_color: str) -> tuple:
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int] | None:
     """Convert hex color string to (r, g, b) tuple.
     Returns None for non-hex values like 'transparent'.
     """
@@ -318,18 +303,11 @@ def _interpolate_colors_rgb(colors: list, t: float) -> tuple:
 
 def _dim_hex(hex_color: str, factor: float = 0.4) -> str:
     """Darken a hex color by a factor (0 = black, 1 = unchanged)."""
-    r, g, b = _hex_to_rgb(hex_color)
+    rgb = _hex_to_rgb(hex_color)
+    if rgb is None:
+        return "#000000"
+    r, g, b = rgb
     return _rgb_to_hex(int(r * factor), int(g * factor), int(b * factor))
-
-
-def _brighten_hex(hex_color: str, factor: float = 0.3) -> str:
-    """Brighten a hex color toward white by a factor."""
-    r, g, b = _hex_to_rgb(hex_color)
-    return _rgb_to_hex(
-        int(r + (255 - r) * factor),
-        int(g + (255 - g) * factor),
-        int(b + (255 - b) * factor),
-    )
 
 
 def _blend_colors(hex1: str, hex2: str, t: float) -> str:
@@ -540,125 +518,7 @@ class PulseIndicator(ctk.CTkCanvas):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# NEW: FloatingWidget — Smooth Vertical Float Animation
-# Inspired by the website's @keyframes float (6s ease-in-out infinite)
-# ══════════════════════════════════════════════════════════════════════
-
-class FloatingWidget:
-    """
-    Mixin that adds a smooth vertical float animation to any widget.
-    The widget gently bobs up and down by `amplitude` pixels over
-    `duration` ms, mimicking the website's CSS `float` animation.
-    """
-
-    def enable_float(self, amplitude=5, duration=ANIM_FLOAT_DURATION):
-        """Start the floating animation on this widget."""
-        self._float_amplitude = amplitude
-        self._float_duration = duration
-        self._float_phase = 0.0
-        self._float_running = True
-        self._float_offset_y = 0
-        self._do_float()
-
-    def _do_float(self):
-        if not getattr(self, "_float_running", False):
-            return
-        try:
-            import math as _m
-            # Smooth sine wave: 0 → amplitude → 0 → -amplitude → 0
-            new_offset = _m.sin(self._float_phase) * self._float_amplitude
-            delta = new_offset - self._float_offset_y
-            self._float_offset_y = new_offset
-            # Move using place or pack offset
-            try:
-                info = self.place_info()
-                if info and info.get("y"):
-                    current_y = int(info.get("y", 0))
-                    self.place(y=current_y + int(delta))
-                else:
-                    # Fallback: use pack
-                    current_y = self.winfo_y()
-                    self.place(x=self.winfo_x(), y=current_y + int(delta))
-            except Exception:
-                pass
-            self._float_phase += (2 * _m.pi) / (self._float_duration / 50)
-            self.after(50, self._do_float)
-        except (tk.TclError, AttributeError):
-            self._float_running = False
-
-    def stop_float(self):
-        self._float_running = False
-
-
-class FloatingCanvas(ctk.CTkCanvas):
-    """
-    A canvas container that makes its single child widget float
-    up and down smoothly, matching the website's float animation.
-    """
-
-    def __init__(self, master, amplitude=5, duration=ANIM_FLOAT_DURATION, **kwargs):
-        super().__init__(
-            master,
-            highlightthickness=0,
-            bd=0,
-            **kwargs,
-        )
-        self._amplitude = amplitude
-        self._duration = duration
-        self._phase = 0.0
-        self._running = True
-        self._child = None
-        self._offset_y = 0
-        self.bind("<Configure>", lambda e: self.after(50, self._draw))
-        self.after(100, self._animate)
-
-    def set_child(self, widget):
-        """Set the widget to float."""
-        self._child = widget
-        self._draw()
-
-    def _draw(self):
-        try:
-            self.delete("all")
-        except tk.TclError:
-            return
-        if self._child is None:
-            return
-        w = self.winfo_width()
-        h = self.winfo_height()
-        cw = self._child.winfo_reqwidth()
-        ch = self._child.winfo_reqheight()
-        if w < 2 or h < 2:
-            return
-        x = (w - cw) // 2
-        y = int((h - ch) // 2 + self._offset_y)
-        self._child.place_forget()
-        try:
-            self._child.place(in_=self, x=x, y=y)
-        except tk.TclError:
-            pass
-
-    def _animate(self):
-        if not self._running:
-            return
-        try:
-            self._offset_y = math.sin(self._phase) * self._amplitude
-            self._phase += (2 * math.pi) / (self._duration / 50)
-            self._draw()
-            self.after(50, self._animate)
-        except tk.TclError:
-            self._running = False
-
-    def destroy(self):
-        self._running = False
-        try:
-            super().destroy()
-        except Exception:
-            pass
-
-
-# ══════════════════════════════════════════════════════════════════════
-# NEW: FadeInFrame — Simulated Fade-In on Widget Creation
+# FadeInFrame — Simulated Fade-In on Widget Creation
 # Inspired by the website's @keyframes fade-in (1s ease-out)
 # Since Tkinter doesn't support true alpha, we simulate by
 # transitioning the fg_color from background to target.
@@ -832,7 +692,9 @@ class ShimmerBar(tk.Canvas):
             return
         try:
             self._draw()
-            self._running = False  # render once, then stop
+            step = 1.0 / (self._duration / 45)  # full cycle over duration
+            self._phase = (self._phase + step) % 1.0
+            self.after(45, self._animate)
         except tk.TclError:
             self._running = False
 
@@ -1129,66 +991,7 @@ class GlassCard(ctk.CTkFrame):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# NEW: AnimatedPulseGlow — Pulsing Glow Ring Around a Widget
-# Inspired by the website's pulse-glow animation + the navbar logo glow
-# ══════════════════════════════════════════════════════════════════════
-
-class AnimatedPulseGlow(tk.Canvas):
-    """
-    A canvas that draws a pulsing glow ring effect behind a widget.
-    Mimics the website's logo glow: `bg-iso-purple/20 blur-lg group-hover:bg-iso-purple/30`.
-
-    Performance: Refresh reduced to 150ms (from 80ms) since the visual
-    difference is imperceptible at this scale.
-    """
-
-    def __init__(self, master, color=COLOR_PURPLE, size=60, **kwargs):
-        super().__init__(
-            master,
-            width=size,
-            height=size,
-            highlightthickness=0,
-            bd=0,
-            **kwargs,
-        )
-        self._color = color
-        self._size = size
-        self._phase = 0.0
-        self._running = True
-        self.after(50, self._animate)
-
-    def _animate(self):
-        if not self._running:
-            return
-        try:
-            self.delete("all")
-            cx = cy = self._size // 2
-            pulse = (math.sin(self._phase) + 1.0) / 2.0
-
-            # Outer glow circle
-            glow_r = int(self._size * 0.42 + pulse * 4)
-            glow_color = _dim_hex(self._color, 0.2 + pulse * 0.15)
-            self.create_oval(
-                cx - glow_r, cy - glow_r, cx + glow_r, cy + glow_r,
-                fill=glow_color, outline="",
-            )
-
-            self._phase += 0.1
-            # 150ms instead of 80ms — visual difference is imperceptible
-            self.after(250, self._animate)
-        except tk.TclError:
-            self._running = False
-
-    def destroy(self):
-        self._running = False
-        try:
-            super().destroy()
-        except Exception:
-            pass
-
-
-# ══════════════════════════════════════════════════════════════════════
-# NEW: AnimatedLogo — Logo Image with Static Glow Effect
+# AnimatedLogo — Logo Image with Static Glow Effect
 # Uses the isocortex-logo.png from website/public/
 # ══════════════════════════════════════════════════════════════════════
 
@@ -1197,7 +1000,7 @@ class AnimatedLogo(ctk.CTkFrame):
     A logo display widget that loads isocortex-logo.png and adds
     a static glow behind it, matching the website's navbar logo effect.
 
-    Performance: Replaced AnimatedPulseGlow with a simple static CTkFrame
+    Performance: Replaced pulsing glow with a simple static CTkFrame
     glow. For a 36px logo, the continuous animation loop was unnecessary
     overhead. The static glow looks identical at this small size.
     """
@@ -1206,7 +1009,7 @@ class AnimatedLogo(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self._logo_size = logo_size
 
-        # Static glow frame behind logo (replaces AnimatedPulseGlow animation loop)
+        # Static glow frame behind logo (no animation timer needed)
         glow_size = logo_size + 20
         self._glow = ctk.CTkFrame(
             self,
@@ -1237,7 +1040,7 @@ class AnimatedLogo(ctk.CTkFrame):
             try:
                 from PIL import Image as PILImage
                 img = PILImage.open(logo_path)
-                img = img.resize((logo_size, logo_size), PILImage.LANCZOS)
+                img = img.resize((logo_size, logo_size), PILImage.Resampling.LANCZOS)
                 ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(logo_size, logo_size))
                 self._logo_label = ctk.CTkLabel(
                     self, image=ctk_img, text="",
@@ -1361,7 +1164,7 @@ class HeroBackground(tk.Canvas):
             from PIL import Image as PILImage, ImageTk as PILImageTk, ImageFilter
             # Resize to fill canvas
             img = self._pil_img.copy()
-            img = img.resize((w, h), PILImage.LANCZOS)
+            img = img.resize((w, h), PILImage.Resampling.LANCZOS)
 
             # Apply pulse-glow: vary brightness slightly
             pulse = (math.sin(self._phase) + 1.0) / 2.0
@@ -1390,7 +1193,7 @@ class HeroBackground(tk.Canvas):
         # Rebuild cache if canvas size changed
         if self._cache_size != (w, h):
             img = self._pil_img.copy()
-            img = img.resize((w, h), _PILImage.LANCZOS)
+            img = img.resize((w, h), _PILImage.Resampling.LANCZOS)
 
             # Apply base darkening (website's opacity-30 look)
             enhancer = _PILImageEnhance.Brightness(img)
@@ -1405,7 +1208,7 @@ class HeroBackground(tk.Canvas):
         pulse = (math.sin(self._phase) + 1.0) / 2.0
         brightness_factor = 0.7 + pulse * 0.3  # 0.7 to 1.0
 
-        enhancer = _PILImageEnhance.Brightness(self._cached_base)
+        enhancer = _PILImageEnhance.Brightness(self._cached_base)  # type: ignore[arg-type]
         img = enhancer.enhance(brightness_factor)
 
         self._photo = _PILImageTk.PhotoImage(img)
@@ -1507,7 +1310,7 @@ def make_selectable_label(
     text_color=None,
     bg_color=None,
     height=1,
-    wrap="none",
+    wrap: str = "none",
     width=None,
     anchor="w",
     **kwargs,
@@ -1527,7 +1330,7 @@ def make_selectable_label(
     widget = tk.Text(
         parent,
         height=height,
-        wrap=wrap,
+        wrap=wrap,  # type: ignore[arg-type]
         font=font,
         fg=text_color,
         bg=bg_color,
@@ -1554,27 +1357,6 @@ def make_selectable_label(
 # Premium UI Helper Functions
 # ══════════════════════════════════════════════════════════════════════
 
-def create_shadow_card(parent, corner_radius=BORDER_RADIUS_LG, shadow_size=SHADOW_OFFSET):
-    """
-    Create a premium card with a subtle shadow effect.
-    Returns (shadow_frame, card_frame).
-    """
-    shadow = ctk.CTkFrame(
-        parent,
-        fg_color=COLOR_SHADOW,
-        corner_radius=corner_radius + 2,
-    )
-    card = ctk.CTkFrame(
-        shadow,
-        fg_color=COLOR_BG_CARD,
-        corner_radius=corner_radius,
-        border_width=1,
-        border_color=COLOR_BORDER_LIGHT,
-    )
-    card.pack(fill="both", expand=True, padx=2, pady=2)
-    return shadow, card
-
-
 def create_gradient_bar(parent, height=3, colors=None):
     """
     Create a horizontal gradient bar using Canvas for smooth blending.
@@ -1584,35 +1366,6 @@ def create_gradient_bar(parent, height=3, colors=None):
         colors = GRADIENT_PURPLE_GOLD
     bar = GradientCanvas(parent, colors=colors, height=height, orientation="horizontal")
     return bar
-
-
-def create_accent_strip(parent, color=COLOR_PURPLE, height=4, corner_radius=2):
-    """Create a vertical accent strip (for card left borders)."""
-    strip = ctk.CTkFrame(
-        parent, width=height, fg_color=color, corner_radius=corner_radius,
-    )
-    strip.pack_propagate(False)
-    return strip
-
-
-def create_section_header(parent, title, accent_color=COLOR_PURPLE):
-    """
-    Create a section header with accent label + separator line.
-    Returns the header frame (already packed into parent).
-    """
-    header = ctk.CTkFrame(parent, fg_color="transparent")
-    header.pack(fill="x", pady=(PADDING_LG, PADDING_SM))
-
-    ctk.CTkLabel(
-        header, text=title,
-        font=(FONT_FAMILY, FONT_SIZE_XXS),
-        text_color=accent_color, anchor="w",
-    ).pack(side="left")
-
-    sep = ctk.CTkFrame(header, height=1, fg_color=COLOR_BORDER)
-    sep.pack(side="right", fill="x", expand=True, padx=(PADDING, 0))
-    sep.pack_propagate(False)
-    return header
 
 
 def create_page_header(parent, title, subtitle=None):
@@ -1730,32 +1483,6 @@ def create_animated_stat_card(parent, icon, label, default_value, color, card_wi
     value_label.pack(fill="x", pady=(4, 0))
 
     return card, value_label, shimmer
-
-
-# ══════════════════════════════════════════════════════════════════════
-# GlowFrame — Frame with a subtle colored glow border effect
-# ══════════════════════════════════════════════════════════════════════
-
-class GlowFrame(ctk.CTkFrame):
-    """
-    A frame with a simulated glow border effect using layered frames.
-    The outer layer is a slightly transparent version of the glow color.
-    """
-
-    def __init__(self, master, glow_color=COLOR_PURPLE, glow_width=2, **kwargs):
-        super().__init__(master, fg_color=_dim_hex(glow_color, 0.3), corner_radius=kwargs.get("corner_radius", BORDER_RADIUS_LG) + glow_width)
-        self._inner = ctk.CTkFrame(
-            self,
-            fg_color=kwargs.pop("fg_color", COLOR_BG_CARD),
-            corner_radius=kwargs.pop("corner_radius", BORDER_RADIUS_LG),
-            border_width=1,
-            border_color=glow_color,
-        )
-        self._inner.pack(fill="both", expand=True, padx=glow_width, pady=glow_width)
-
-    @property
-    def inner(self):
-        return self._inner
 
 
 # ══════════════════════════════════════════════════════════════════════

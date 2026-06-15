@@ -22,7 +22,7 @@ import customtkinter as ctk
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER,
     COLOR_PURPLE, COLOR_PURPLE_DARK, COLOR_PURPLE_LIGHT,
-    COLOR_GOLD, COLOR_GOLD_LIGHT,
+    COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_BTN_TEXT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
@@ -54,7 +54,7 @@ class IndexesScreen(ctk.CTkFrame):
     def _build_ui(self):
         """Build all sections of the indexes screen."""
 
-        # ── 0. Subtle animated gradient background ─────────────────
+        # ── Subtle animated gradient background ─────────────────────
         self._bg_canvas = AnimatedGradientBG(self)
         self._bg_canvas.place(x=0, y=0, relwidth=1, relheight=1)
 
@@ -62,22 +62,22 @@ class IndexesScreen(ctk.CTkFrame):
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=PADDING_LG, pady=PADDING_LG)
 
-        # ── 1. Animated shimmer accent bar ─────────────────────────
+        # ── Animated shimmer accent bar ─────────────────────────────
         self._build_shimmer_bar(content)
 
-        # ── 2. Page header ─────────────────────────────────────────
+        # ── Page header ────────────────────────────────────────────
         self._build_header(content)
 
-        # ── 3. Gradient divider after header ──────────────────────
+        # ── Gradient divider after header ────────────────────────
         GradientDivider(content, height=1).pack(fill="x", pady=(PADDING_SM, PADDING_MD))
 
-        # ── 4. Section label ───────────────────────────────────────
+        # ── Section label ──────────────────────────────────────────
         self._build_section_label(content)
 
-        # ── 5. Gradient divider before list ────────────────────────
+        # ── Gradient divider before list ─────────────────────────
         GradientDivider(content, height=1).pack(fill="x", pady=(PADDING_SM, PADDING_MD))
 
-        # ── 6. Scrollable index list ───────────────────────────────
+        # ── Scrollable index list ────────────────────────────────
         self._list_frame = ctk.CTkScrollableFrame(
             content,
             fg_color="transparent",
@@ -241,7 +241,7 @@ class IndexesScreen(ctk.CTkFrame):
             font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
             fg_color=COLOR_GOLD,
             hover_color=COLOR_GOLD_LIGHT,
-            text_color="#0a0a0f",
+            text_color=COLOR_GOLD_BTN_TEXT,
             height=40,
             corner_radius=BORDER_RADIUS_SM,
             width=160,

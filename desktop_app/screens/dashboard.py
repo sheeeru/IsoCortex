@@ -24,7 +24,7 @@ from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER,
     COLOR_PURPLE, COLOR_PURPLE_DARK, COLOR_PURPLE_LIGHT,
     COLOR_PURPLE_DEEP,
-    COLOR_GOLD, COLOR_GOLD_LIGHT,
+    COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_BTN_TEXT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_INFO, COLOR_WARNING,
@@ -35,8 +35,7 @@ from desktop_app.theme import (
     FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG,
-    create_gradient_bar, create_page_header, create_stat_card,
-    GradientCanvas, PulseIndicator, make_selectable_label,
+    PulseIndicator, make_selectable_label,
     GRADIENT_PURPLE_GOLD,
     # ── Enhanced animated visual components ──
     ShimmerBar,
@@ -45,8 +44,6 @@ from desktop_app.theme import (
     create_animated_stat_card,
     FadeInFrame,
     AnimatedGradientBG,
-    stagger_animation,
-    ANIM_DELAY_200, ANIM_DELAY_400, ANIM_DELAY_600, ANIM_DELAY_800,
 )
 
 
@@ -68,8 +65,8 @@ class DashboardScreen(ctk.CTkFrame):
         super().__init__(parent, **kwargs)
         self._app = app
         self._build_ui()
-        # Delayed refresh — waits for all staggered sections to finish building
-        self.after(ANIM_DELAY_800 + 500, self._refresh_stats)
+        # Delayed refresh — waits for all sections to finish building
+        self.after(100, self._refresh_stats)
 
     # ────────────────────────────────────────────────────────────────
     # UI Construction
@@ -78,7 +75,7 @@ class DashboardScreen(ctk.CTkFrame):
     def _build_ui(self):
         """Build all dashboard UI sections with animated visual effects."""
         # Outer scrollable content area
-        content = ctk.CTkFrame(self, fg_color="transparent")
+        content = ctk.CTkScrollableFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=PADDING_LG, pady=PADDING_LG)
 
         # ── AnimatedGradientBG: living/breathing gradient background ──
@@ -88,10 +85,10 @@ class DashboardScreen(ctk.CTkFrame):
         # ── ShimmerBar: animated top accent bar (replaces GradientCanvas) ──
         ShimmerBar(content, height=4).pack(fill="x", pady=(0, PADDING_LG))
 
-        # ── Staggered section animations (200 → 400 → 600 ms) ──
-        self.after(ANIM_DELAY_200, lambda: self._build_header(content))
-        self.after(ANIM_DELAY_400, lambda: self._build_stat_cards(content))
-        self.after(ANIM_DELAY_600, lambda: self._build_bottom_panels(content))
+        # ── Sequential section build (minimal stagger for render order) ──
+        self.after(10, lambda: self._build_header(content))
+        self.after(20, lambda: self._build_stat_cards(content))
+        self.after(30, lambda: self._build_bottom_panels(content))
 
     # ── Helper: GlassCard with corrected pack behaviour ───────────
 
@@ -235,9 +232,9 @@ class DashboardScreen(ctk.CTkFrame):
         right_col = ctk.CTkFrame(bottom, fg_color="transparent")
         right_col.pack(side="right", fill="both", expand=True, padx=(PADDING_MD, 0))
 
-        # Model at ~800 ms, Storage at ~1 000 ms (relative to ANIM_DELAY_600)
-        self.after(ANIM_DELAY_200, lambda: self._build_model_section(right_col))
-        self.after(ANIM_DELAY_400, lambda: self._build_storage_section(right_col))
+        # Model + Storage build immediately (no sub-stagger needed)
+        self._build_model_section(right_col)
+        self._build_storage_section(right_col)
 
     # ── Quick Actions ──────────────────────────────────────────────
 
@@ -281,7 +278,7 @@ class DashboardScreen(ctk.CTkFrame):
             font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
             fg_color=COLOR_GOLD,
             hover_color=COLOR_GOLD_LIGHT,
-            text_color="#0a0a0f",
+            text_color=COLOR_GOLD_BTN_TEXT,
             height=44,
             corner_radius=BORDER_RADIUS_SM,
             anchor="w",
@@ -488,6 +485,7 @@ class DashboardScreen(ctk.CTkFrame):
                 pass
 
             # Update storage path label (may be a selectable tk.Text widget)
+            path_text = str(self._app.engine.data_dir)
             try:
                 path_text = str(self._app.engine.data_dir)
                 _update_text_widget(self._storage_path_label, path_text)
@@ -532,6 +530,7 @@ class DashboardScreen(ctk.CTkFrame):
                     pass
 
                 # Update model detail (may be a selectable tk.Text widget)
+                detail_text = ""
                 try:
                     detail_text = f"{status['model_name']}  ·  {status['dimension']}d  ·  {status['device']}"
                     _update_text_widget(self._model_detail_label, detail_text)
@@ -562,6 +561,7 @@ class DashboardScreen(ctk.CTkFrame):
                     pass
 
                 # Update model detail (may be a selectable tk.Text widget)
+                detail_text = ""
                 try:
                     detail_text = f"{status['model_name']}  —  Will auto-load on first use"
                     _update_text_widget(self._model_detail_label, detail_text)

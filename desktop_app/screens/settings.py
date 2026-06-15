@@ -22,11 +22,12 @@ Design language:
 """
 
 import customtkinter as ctk
+import threading
 
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER,
     COLOR_PURPLE, COLOR_PURPLE_DARK, COLOR_PURPLE_LIGHT, COLOR_PURPLE_DEEP,
-    COLOR_GOLD, COLOR_GOLD_LIGHT,
+    COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_BTN_TEXT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
@@ -36,7 +37,6 @@ from desktop_app.theme import (
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
     ThemeMode,
-    GradientCanvas, GRADIENT_PURPLE_GOLD,
     ShimmerBar, GlassCard, GradientDivider, AnimatedGradientBG,
     FadeInFrame, create_badge,
     ANIM_DELAY_200, ANIM_DELAY_400, ANIM_DELAY_600, ANIM_DELAY_800,
@@ -176,8 +176,9 @@ class SettingsScreen(ctk.CTkFrame):
 
         ctk.CTkLabel(
             glow_container,
-            text="\U0001f3a8",
-            font=(FONT_FAMILY, FONT_SIZE_LARGE),
+            text="T",
+            font=(FONT_FAMILY, FONT_SIZE_LARGE, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
         ).place(relx=0.5, rely=0.5, anchor="center")
 
         title_sub = ctk.CTkFrame(theme_label_row, fg_color="transparent")
@@ -193,7 +194,7 @@ class SettingsScreen(ctk.CTkFrame):
 
         self._mode_label = ctk.CTkLabel(
             title_sub,
-            text=f"Currently: {ThemeMode.get().title()} Mode",
+            text="Dark mode is the only supported theme.",
             font=(FONT_FAMILY, FONT_SIZE_SMALL),
             text_color=COLOR_TEXT_DIM,
             anchor="w",
@@ -202,19 +203,22 @@ class SettingsScreen(ctk.CTkFrame):
 
         self._theme_segment = ctk.CTkSegmentedButton(
             appearance_inner,
-            values=["Dark", "Light"],
+            values=["Dark"],
             font=(FONT_FAMILY, FONT_SIZE_NORMAL),
-            command=self._on_theme_change,
             height=40,
             corner_radius=BORDER_RADIUS_SM,
         )
         self._theme_segment.pack(fill="x", pady=(PADDING_SM, 0))
+        self._theme_segment.set("Dark")
 
-        # Set initial selection from current theme mode
-        try:
-            self._theme_segment.set(ThemeMode.get().title())
-        except Exception:
-            pass
+        ctk.CTkLabel(
+            appearance_inner,
+            text="Light mode is under development and will be available in a future update.",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+            wraplength=560,
+        ).pack(fill="x", pady=(PADDING_SM, 0))
 
         # GradientDivider after Appearance
         GradientDivider(appearance_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
@@ -297,7 +301,7 @@ class SettingsScreen(ctk.CTkFrame):
 
         ctk.CTkLabel(
             idx_inner,
-            text="Vector indexes are stored locally in  ~/.isortex/indices/  and consist of the following files:",
+            text="Vector indexes are stored locally in ~/.isocortex/indices/  and consist of the following files:",
             font=(FONT_FAMILY, FONT_SIZE_SMALL),
             text_color=COLOR_TEXT_SECONDARY,
             anchor="w",
@@ -342,7 +346,58 @@ class SettingsScreen(ctk.CTkFrame):
         GradientDivider(index_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
         # ════════════════════════════════════════════════════════════
-        # 4 · SECURITY  (FadeInFrame delay=ANIM_DELAY_800)
+        # 4 · WATCH FOLDERS  (FadeInFrame delay=ANIM_DELAY_800)
+        # ════════════════════════════════════════════════════════════
+        watch_fade = FadeInFrame(
+            scroll, fg_color="transparent", delay=ANIM_DELAY_800,
+        )
+        watch_fade.pack(fill="x")
+
+        self._section_header(watch_fade, "Watch Folders")
+
+        watch_inner = self._content_card(watch_fade, glow_color=COLOR_GOLD)
+
+        ctk.CTkLabel(
+            watch_inner,
+            text="Automatically index new files when they appear in watched folders.",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_TEXT_SECONDARY,
+            anchor="w",
+            wraplength=580,
+        ).pack(fill="x", pady=(0, PADDING))
+
+        self._watch_list_frame = ctk.CTkFrame(watch_inner, fg_color="transparent")
+        self._watch_list_frame.pack(fill="x")
+        self._no_watch_label = ctk.CTkLabel(
+            self._watch_list_frame,
+            text="No watch folders configured",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+        )
+        self._no_watch_label.pack(fill="x", pady=(0, PADDING_SM))
+
+        watch_btn_row = ctk.CTkFrame(watch_inner, fg_color="transparent")
+        watch_btn_row.pack(fill="x", pady=(PADDING_SM, 0))
+
+        ctk.CTkButton(
+            watch_btn_row,
+            text="+ Add Folder",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+            fg_color=COLOR_GOLD, hover_color=COLOR_GOLD_LIGHT,
+            text_color=COLOR_GOLD_BTN_TEXT,
+            height=32, width=120,
+            corner_radius=BORDER_RADIUS_SM,
+            command=self._add_watch_folder,
+        ).pack(side="left")
+
+        self._refresh_watch_list()
+
+        # GradientDivider after Watch Folders
+        GradientDivider(watch_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
+
+        # ════════════════════════════════════════════════════════════
+        # 5 · SECURITY  (FadeInFrame delay=ANIM_DELAY_800)
         # ════════════════════════════════════════════════════════════
         security_fade = FadeInFrame(
             scroll, fg_color="transparent", delay=ANIM_DELAY_800,
@@ -412,7 +467,7 @@ class SettingsScreen(ctk.CTkFrame):
         GradientDivider(security_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
         # ════════════════════════════════════════════════════════════
-        # 5 · CHANGE PASSWORD  (FadeInFrame delay=ANIM_DELAY_800)
+        # 6 · CHANGE PASSWORD  (FadeInFrame delay=ANIM_DELAY_800)
         # ════════════════════════════════════════════════════════════
         password_fade = FadeInFrame(
             scroll, fg_color="transparent", delay=ANIM_DELAY_800,
@@ -512,7 +567,36 @@ class SettingsScreen(ctk.CTkFrame):
         GradientDivider(password_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
         # ════════════════════════════════════════════════════════════
-        # 6 · DANGER ZONE  (FadeInFrame delay=ANIM_DELAY_800)
+        # 7 · PLUGINS
+        # ════════════════════════════════════════════════════════════
+        plugins_fade = FadeInFrame(
+            scroll, fg_color="transparent", delay=ANIM_DELAY_200 * 5,
+        )
+        plugins_fade.pack(fill="x")
+
+        self._section_header(plugins_fade, "Plugins")
+
+        plugins_inner = self._content_card(plugins_fade, glow_color=COLOR_GOLD)
+
+        ctk.CTkLabel(
+            plugins_inner,
+            text="Extend IsoCortex with custom Python plugins.",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_TEXT_SECONDARY,
+            anchor="w",
+        ).pack(fill="x", pady=(0, PADDING_SM))
+
+        # Plugin list
+        self._plugins_container = ctk.CTkFrame(plugins_inner, fg_color="transparent")
+        self._plugins_container.pack(fill="x")
+
+        self._refresh_plugins_list()
+
+        # GradientDivider after Plugins
+        GradientDivider(plugins_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
+
+        # ════════════════════════════════════════════════════════════
+        # 7 · DANGER ZONE  (FadeInFrame delay=ANIM_DELAY_800)
         # ════════════════════════════════════════════════════════════
         danger_fade = FadeInFrame(
             scroll, fg_color="transparent", delay=ANIM_DELAY_800,
@@ -537,8 +621,8 @@ class SettingsScreen(ctk.CTkFrame):
 
         ctk.CTkLabel(
             danger_title_row,
-            text="⚠",
-            font=(FONT_FAMILY, FONT_SIZE_LARGE),
+            text="!",
+            font=(FONT_FAMILY, FONT_SIZE_LARGE, "bold"),
             text_color=COLOR_WARNING,
             anchor="w",
             width=24,
@@ -586,10 +670,14 @@ class SettingsScreen(ctk.CTkFrame):
     # ────────────────────────────────────────────────────────────────
 
     def _on_theme_change(self, value: str):
-        """Switch theme and rebuild the settings screen."""
+        """Switch theme and rebuild the entire app to propagate colors everywhere."""
         ThemeMode.set(value.lower())
         try:
-            self._app.show_screen("settings", force=True)
+            # Rebuild current screen within the same app instance
+            # so sidebar and all UI elements pick up new theme colors
+            current = self._app._current_screen
+            if current:
+                self._app.show_screen(current, force=True)
         except Exception:
             pass
 
@@ -603,7 +691,7 @@ class SettingsScreen(ctk.CTkFrame):
             settings = self._app.engine.get_settings()
 
             mappings = {
-                "version":       "1.0.0",
+                "version":       "2.0.0",
                 "data_dir":      str(settings.get("data_dir", "N/A")),
                 "model":         settings.get("model_name", "N/A"),
                 "dimension":     str(settings.get("vector_dim", "N/A")),
@@ -697,6 +785,197 @@ class SettingsScreen(ctk.CTkFrame):
                 pass
 
     # ────────────────────────────────────────────────────────────────
+    # Watch Folders
+    # ────────────────────────────────────────────────────────────────
+
+    def _refresh_watch_list(self):
+        """Re-render the list of currently watched folders."""
+        for w in self._watch_list_frame.winfo_children():
+            w.destroy()
+
+        watcher = self._get_watcher()
+        if not watcher:
+            ctk.CTkLabel(
+                self._watch_list_frame,
+                text="Watch folder service is not available",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+                anchor="w",
+            ).pack(fill="x", pady=(0, PADDING_SM))
+            return
+
+        folders = watcher.get_watched_folders()
+        if not folders:
+            ctk.CTkLabel(
+                self._watch_list_frame,
+                text="No watch folders configured",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+                anchor="w",
+            ).pack(fill="x", pady=(0, PADDING_SM))
+            return
+
+        for info in folders:
+            folder_path = info["folder_path"]
+            index_name = info["index_name"]
+
+            row = ctk.CTkFrame(self._watch_list_frame, fg_color="transparent")
+            row.pack(fill="x", pady=2)
+
+            ctk.CTkLabel(
+                row,
+                text=folder_path,
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT,
+                anchor="w",
+            ).pack(side="left", fill="x", expand=True)
+
+            idx_badge = create_badge(row, text=index_name, color=COLOR_GOLD)
+            idx_badge.pack(side="left", padx=(PADDING, PADDING_SM))
+
+            remove_btn = ctk.CTkButton(
+                row,
+                text="Remove",
+                font=(FONT_FAMILY, FONT_SIZE_XXS),
+                fg_color="transparent",
+                hover_color="#3a1515",
+                text_color=COLOR_ERROR,
+                height=26, width=60,
+                corner_radius=BORDER_RADIUS_SM,
+                border_width=1, border_color=COLOR_BORDER,
+                command=lambda fp=folder_path: self._remove_watch_folder(fp),
+            )
+            remove_btn.pack(side="right")
+
+    def _add_watch_folder(self):
+        """Open a folder picker and start watching the selected folder."""
+        from tkinter import filedialog
+        chosen = filedialog.askdirectory(title="Select Folder to Watch")
+        if not chosen:
+            return
+
+        watcher = self._get_watcher()
+        if not watcher:
+            try:
+                self._app.show_toast("Watch service not available", "error")
+            except Exception:
+                pass
+            return
+
+        try:
+            watcher.add_watch(chosen, "default")
+            self._refresh_watch_list()
+            try:
+                self._app.show_toast(f"Now watching: {chosen}", "success")
+            except Exception:
+                pass
+        except ValueError as exc:
+            try:
+                self._app.show_toast(str(exc), "error")
+            except Exception:
+                pass
+        except Exception as exc:
+            try:
+                self._app.show_toast(f"Failed to watch folder: {exc}", "error")
+            except Exception:
+                pass
+
+    def _remove_watch_folder(self, folder_path: str):
+        """Stop watching a folder and refresh the list."""
+        watcher = self._get_watcher()
+        if not watcher:
+            return
+
+        try:
+            watcher.remove_watch(folder_path)
+            self._refresh_watch_list()
+            try:
+                self._app.show_toast(f"Stopped watching: {folder_path}", "info")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _get_watcher(self):
+        """Get the app's FolderWatcher instance, or None."""
+        try:
+            return self._app._watcher
+        except AttributeError:
+            return None
+
+    def _refresh_plugins_list(self):
+        """Refresh the plugin list in settings."""
+        # Clear existing
+        for w in self._plugins_container.winfo_children():
+            w.destroy()
+
+        pm = self._app.engine.plugin_manager
+        if not pm:
+            ctk.CTkLabel(
+                self._plugins_container,
+                text="Plugin system not available",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+            ).pack(anchor="w")
+            return
+
+        plugins = pm.get_plugin_list()
+
+        if not plugins:
+            ctk.CTkLabel(
+                self._plugins_container,
+                text="No plugins loaded. Place .py files in ~/.isocortex/plugins/",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+                wraplength=400,
+            ).pack(anchor="w", pady=PADDING_SM)
+            return
+
+        for plugin in plugins:
+            row = ctk.CTkFrame(self._plugins_container, fg_color=COLOR_BG_ELEVATED, corner_radius=BORDER_RADIUS_SM)
+            row.pack(fill="x", pady=2)
+
+            row_inner = ctk.CTkFrame(row, fg_color="transparent")
+            row_inner.pack(fill="x", padx=PADDING_MD, pady=(PADDING_SM, PADDING_SM))
+
+            # Name + version
+            name_text = f"{plugin['name']}  v{plugin['version']}"
+            ctk.CTkLabel(
+                row_inner, text=name_text,
+                font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+                text_color=COLOR_TEXT,
+                anchor="w",
+            ).pack(anchor="w")
+
+            # Description
+            if plugin.get("description"):
+                ctk.CTkLabel(
+                    row_inner, text=plugin["description"],
+                    font=(FONT_FAMILY, FONT_SIZE_XXS),
+                    text_color=COLOR_TEXT_DIM,
+                    anchor="w", wraplength=350,
+                ).pack(anchor="w")
+
+            # Hooks
+            hooks = plugin.get("hooks", [])
+            if hooks:
+                ctk.CTkLabel(
+                    row_inner, text=f"Hooks: {', '.join(hooks)}",
+                    font=(FONT_FAMILY, FONT_SIZE_XXS),
+                    text_color=COLOR_PURPLE_LIGHT,
+                    anchor="w",
+                ).pack(anchor="w")
+
+            # Author
+            if plugin.get("author"):
+                ctk.CTkLabel(
+                    row_inner, text=f"by {plugin['author']}",
+                    font=(FONT_FAMILY, FONT_SIZE_XXS),
+                    text_color=COLOR_TEXT_DIM,
+                    anchor="w",
+                ).pack(anchor="w")
+
+    # ────────────────────────────────────────────────────────────────
     # Reset All Data (Danger Zone)
     # ────────────────────────────────────────────────────────────────
 
@@ -764,8 +1043,15 @@ class SettingsScreen(ctk.CTkFrame):
 
         def do_reset():
             dialog.destroy()
-            try:
-                success = self._app.engine.reset_data()
+
+            def _reset_thread():
+                try:
+                    success = self._app.engine.reset_data()
+                except Exception:
+                    success = False
+                self.after(0, lambda: _reset_done(success))
+
+            def _reset_done(success):
                 if success:
                     self._app.show_screen("setup")
                     try:
@@ -777,11 +1063,8 @@ class SettingsScreen(ctk.CTkFrame):
                         self._app.show_toast("Failed to reset data", "error")
                     except Exception:
                         pass
-            except Exception:
-                try:
-                    self._app.show_toast("Failed to reset data", "error")
-                except Exception:
-                    pass
+
+            threading.Thread(target=_reset_thread, daemon=True).start()
 
         ctk.CTkButton(
             btn_row,
