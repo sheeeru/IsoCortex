@@ -27,7 +27,7 @@ jobs:
           pyinstaller -y `
             --name "IsoCortex" `
             --noconsole `
-            --onedir `
+            --onefile `
             --icon "desktop_app/assets/app_icon.png" `
             --add-data "desktop_app/assets;desktop_app/assets" `
             --hidden-import=desktop_app `
@@ -60,7 +60,7 @@ jobs:
             desktop_app/main.py
 
       - name: Zip Windows build
-        run: Compress-Archive -Path dist/IsoCortex/* -DestinationPath IsoCortex-Windows-v2.0.0.zip
+        run: Compress-Archive -Path dist/IsoCortex.exe -DestinationPath IsoCortex-Windows-v2.0.0.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
