@@ -114,6 +114,7 @@ jobs:
             --hidden-import=desktop_app.components.toast \
             --hidden-import=desktop_app.components.exporter \
             --hidden-import=desktop_app.components.preview \
+            --hidden-import=_posixsubprocess \
             --collect-all customtkinter \
             --collect-all onnxruntime \
             --collect-data tokenizers \
@@ -121,7 +122,7 @@ jobs:
             desktop_app/main.py
 
       - name: Zip macOS build
-        run: zip -r IsoCortex-macOS-v2.0.0.zip dist/IsoCortex/
+        run: cd dist && zip -r ../IsoCortex-macOS-v2.0.0.zip IsoCortex.app/
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
