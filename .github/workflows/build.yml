@@ -3,6 +3,7 @@ name: Build IsoCortex
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -16,20 +17,56 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+        run: |
+          pip install --upgrade pip
+          pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet
 
       - name: Build Windows .exe
         run: |
-          pyinstaller -y --name "IsoCortex" --noconsole --onedir --add-data "desktop_app\assets;desktop_app\assets" --hidden-import=desktop_app --hidden-import=desktop_app.app --hidden-import=desktop_app.theme --hidden-import=desktop_app.engine --hidden-import=desktop_app.workers --hidden-import=desktop_app.screens --hidden-import=desktop_app.components --collect-all onnxruntime --collect-data tokenizers --paths . desktop_app/main.py
+          pyinstaller -y `
+            --name "IsoCortex" `
+            --noconsole `
+            --onedir `
+            --icon "desktop_app/assets/app_icon.png" `
+            --add-data "desktop_app/assets;desktop_app/assets" `
+            --hidden-import=desktop_app `
+            --hidden-import=desktop_app.main `
+            --hidden-import=desktop_app.app `
+            --hidden-import=desktop_app.theme `
+            --hidden-import=desktop_app.engine `
+            --hidden-import=desktop_app.llm `
+            --hidden-import=desktop_app.workers `
+            --hidden-import=desktop_app.ocr `
+            --hidden-import=desktop_app.code_parser `
+            --hidden-import=desktop_app.plugins `
+            --hidden-import=desktop_app.watcher `
+            --hidden-import=desktop_app.screens `
+            --hidden-import=desktop_app.screens.search `
+            --hidden-import=desktop_app.screens.upload `
+            --hidden-import=desktop_app.screens.indexes `
+            --hidden-import=desktop_app.screens.dashboard `
+            --hidden-import=desktop_app.screens.settings `
+            --hidden-import=desktop_app.screens.login `
+            --hidden-import=desktop_app.components `
+            --hidden-import=desktop_app.components.sidebar `
+            --hidden-import=desktop_app.components.toast `
+            --hidden-import=desktop_app.components.exporter `
+            --hidden-import=desktop_app.components.preview `
+            --collect-all customtkinter `
+            --collect-all onnxruntime `
+            --collect-data tokenizers `
+            --paths . `
+            desktop_app/main.py
 
       - name: Zip Windows build
-        run: Compress-Archive -Path dist/IsoCortex/* -DestinationPath IsoCortex-Windows.zip
+        run: Compress-Archive -Path dist/IsoCortex/* -DestinationPath IsoCortex-Windows-v2.0.0.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IsoCortex-Windows
-          path: IsoCortex-Windows.zip
+          name: IsoCortex-Windows-v2.0.0
+          path: IsoCortex-Windows-v2.0.0.zip
 
   build-macos:
     runs-on: macos-latest
@@ -41,17 +78,53 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+        run: |
+          pip install --upgrade pip
+          pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
+          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet
 
       - name: Build macOS .app
         run: |
-          pyinstaller -y --name "IsoCortex" --noconsole --onedir --add-data "desktop_app/assets:desktop_app/assets" --hidden-import=desktop_app --hidden-import=desktop_app.app --hidden-import=desktop_app.theme --hidden-import=desktop_app.engine --hidden-import=desktop_app.workers --hidden-import=desktop_app.screens --hidden-import=desktop_app.components --collect-all onnxruntime --collect-data tokenizers --paths . desktop_app/main.py
+          pyinstaller -y \
+            --name "IsoCortex" \
+            --windowed \
+            --onedir \
+            --icon "desktop_app/assets/app_icon.png" \
+            --add-data "desktop_app/assets:desktop_app/assets" \
+            --hidden-import=desktop_app \
+            --hidden-import=desktop_app.main \
+            --hidden-import=desktop_app.app \
+            --hidden-import=desktop_app.theme \
+            --hidden-import=desktop_app.engine \
+            --hidden-import=desktop_app.llm \
+            --hidden-import=desktop_app.workers \
+            --hidden-import=desktop_app.ocr \
+            --hidden-import=desktop_app.code_parser \
+            --hidden-import=desktop_app.plugins \
+            --hidden-import=desktop_app.watcher \
+            --hidden-import=desktop_app.screens \
+            --hidden-import=desktop_app.screens.search \
+            --hidden-import=desktop_app.screens.upload \
+            --hidden-import=desktop_app.screens.indexes \
+            --hidden-import=desktop_app.screens.dashboard \
+            --hidden-import=desktop_app.screens.settings \
+            --hidden-import=desktop_app.screens.login \
+            --hidden-import=desktop_app.components \
+            --hidden-import=desktop_app.components.sidebar \
+            --hidden-import=desktop_app.components.toast \
+            --hidden-import=desktop_app.components.exporter \
+            --hidden-import=desktop_app.components.preview \
+            --collect-all customtkinter \
+            --collect-all onnxruntime \
+            --collect-data tokenizers \
+            --paths . \
+            desktop_app/main.py
 
       - name: Zip macOS build
-        run: zip -r IsoCortex-macOS.zip dist/IsoCortex/
+        run: zip -r IsoCortex-macOS-v2.0.0.zip dist/IsoCortex/
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IsoCortex-macOS
-          path: IsoCortex-macOS.zip
+          name: IsoCortex-macOS-v2.0.0
+          path: IsoCortex-macOS-v2.0.0.zip
