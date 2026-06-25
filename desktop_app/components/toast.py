@@ -8,7 +8,7 @@ import customtkinter as ctk
 
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_ELEVATED, COLOR_BORDER,
-    COLOR_TEXT, COLOR_SHADOW,
+    COLOR_TEXT, COLOR_SHADOW, COLOR_INFO,
     FONT_FAMILY, FONT_SIZE_NORMAL, FONT_SIZE_SMALL,
     PADDING, PADDING_SM, PADDING_MD,
     BORDER_RADIUS_LG,
@@ -24,7 +24,7 @@ class ToastNotification:
     _active_count = 0  # Class-level counter for stacking toasts
     _toast_height = 60   # Estimated height of each toast including padding
 
-    def __init__(self, parent, message: str, color: str = "#3b82f6",
+    def __init__(self, parent, message: str, color: str = COLOR_INFO,
                  duration: int = 3000, corner_radius=BORDER_RADIUS_LG):
         self._parent = parent
         self._duration = duration

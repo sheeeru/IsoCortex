@@ -27,7 +27,7 @@ from desktop_app.theme import (
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT, COLOR_ERROR, COLOR_WARNING, COLOR_SUCCESS,
     COLOR_GOLD_BTN_TEXT, COLOR_SHADOW, COLOR_SURFACE_1,
-    FONT_FAMILY, FONT_SIZE_TITLE, FONT_SIZE_MEDIUM,
+    FONT_FAMILY, FONT_FAMILY_DISPLAY, FONT_SIZE_TITLE, FONT_SIZE_MEDIUM,
     FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG, BORDER_RADIUS_XL,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
@@ -108,134 +108,117 @@ class SetupScreen(ctk.CTkFrame):
         return entry
 
     def _build_ui(self):
-        # ── Hero background layer ──────────────────────────────────────
-        _bg_placed = False
+        # ── Left brand panel (42%) ─────────────────────────────────────
+        left_panel = ctk.CTkFrame(
+            self,
+            fg_color=COLOR_PURPLE_DEEP,
+            corner_radius=0,
+        )
+        left_panel.place(relx=0, rely=0, relwidth=0.42, relheight=1.0)
+
+        # Animated gradient background behind left panel content
         try:
-            import os
-            hero_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..", "assets", "hero-bg.png",
-            )
-            if os.path.exists(hero_path):
-                self._hero_bg = HeroBackground(self)
-                self._hero_bg.place(x=0, y=0, relwidth=1, relheight=1)
-                _bg_placed = True
+            _left_bg = AnimatedGradientBG(left_panel)
+            _left_bg.place(relx=0, rely=0, relwidth=1, relheight=1)
         except Exception:
             pass
 
-        if not _bg_placed:
-            try:
-                self._gradient_bg = AnimatedGradientBG(self)
-                self._gradient_bg.place(x=0, y=0, relwidth=1, relheight=1)
-            except Exception:
-                pass
+        # Centered vertical stack inside left panel
+        left_center = ctk.CTkFrame(left_panel, fg_color="transparent")
+        left_center.place(relx=0.5, rely=0.5, anchor="center")
 
-        # ── Centering wrapper ──────────────────────────────────────────
-        outer = ctk.CTkFrame(self, fg_color="transparent")
-        outer.pack(expand=True, fill="both")
-
-        # ── Main card — constrained width, centered ─────────
-        card = FadeInFrame(
-            outer,
-            fg_color=COLOR_BG_CARD,
-            corner_radius=BORDER_RADIUS_XL,
-            border_width=1,
-            border_color=COLOR_BORDER_LIGHT,
-            width=self.CARD_WIDTH,
-        )
-        card.pack(expand=True, padx=PADDING_XL, pady=PADDING_LG)
-
-        # ── Gradient accent bar at top ─────────────────────────────────
-        grad = create_gradient_bar(card, height=3)
-        grad.pack(fill="x")
-
-        # ── Inner content ───────────────────────────────────────────
-        inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", padx=PADDING_LG, pady=(PADDING_MD, PADDING_MD))
-
-        # ── Logo ──────────────────────────────────────────────────────
+        # AnimatedLogo
         try:
-            logo_frame = ctk.CTkFrame(inner, fg_color="transparent")
-            logo_frame.pack(pady=(PADDING_SM, 2))
-
-            logo_row = ctk.CTkFrame(logo_frame, fg_color="transparent")
-            logo_row.pack()
-
-            self._animated_logo = AnimatedLogo(logo_row, logo_size=32)
-            self._animated_logo.pack(side="left", padx=(0, PADDING_SM))
-
-            ctk.CTkLabel(
-                logo_row,
-                text="Iso",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_PURPLE,
-            ).pack(side="left")
-
-            ctk.CTkLabel(
-                logo_row,
-                text="Cortex",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_GOLD,
-            ).pack(side="left")
+            self._brand_logo = AnimatedLogo(left_center, logo_size=56)
+            self._brand_logo.pack(pady=(0, PADDING_MD))
         except Exception:
-            logo_frame = ctk.CTkFrame(inner, fg_color="transparent")
-            logo_frame.pack(pady=(PADDING_SM, 2))
+            pass
 
-            ctk.CTkLabel(
-                logo_frame,
-                text="Iso",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_PURPLE,
-            ).pack(side="left")
-
-            ctk.CTkLabel(
-                logo_frame,
-                text="Cortex",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_GOLD,
-            ).pack(side="left")
-
-        # ── Subtitle + badge in one row ──────────────────────────────
-        top_row = ctk.CTkFrame(inner, fg_color="transparent")
-        top_row.pack(fill="x", pady=(0, 4))
+        # Brand wordmark: "Iso" (purple) + "Cortex" (gold) in huge font
+        wordmark_row = ctk.CTkFrame(left_center, fg_color="transparent")
+        wordmark_row.pack(pady=(0, PADDING_SM))
 
         ctk.CTkLabel(
-            top_row,
-            text="Create your admin account",
-            font=(FONT_FAMILY, FONT_SIZE_NORMAL),
-            text_color=COLOR_TEXT_SECONDARY,
-            anchor="w",
+            wordmark_row,
+            text="Iso",
+            font=(FONT_FAMILY_DISPLAY, 34, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
         ).pack(side="left")
 
-        # ── Badge — create_badge with dot indicator ───────────────────
-        try:
-            badge = create_badge(top_row, "100% LOCAL · PRIVATE", color=COLOR_GOLD)
-            badge.pack(side="right")
-        except Exception:
-            badge = ctk.CTkFrame(
-                top_row,
-                fg_color=COLOR_SURFACE_1,
-                corner_radius=BORDER_RADIUS_LG,
-                height=22,
-            )
-            badge.pack(side="right")
-            badge.pack_propagate(False)
+        ctk.CTkLabel(
+            wordmark_row,
+            text="Cortex",
+            font=(FONT_FAMILY_DISPLAY, 34, "bold"),
+            text_color=COLOR_GOLD,
+        ).pack(side="left")
+
+        # Tagline
+        ctk.CTkLabel(
+            left_center,
+            text="Your Private AI Knowledge Base",
+            font=(FONT_FAMILY, 14),
+            text_color=COLOR_TEXT_SECONDARY,
+        ).pack(pady=(0, PADDING_LG))
+
+        # Feature bullets
+        _bullets = [
+            ("◈", "  Full local privacy"),
+            ("⊘", "  Semantic AI search"),
+            ("▦", "  Multi-index support"),
+        ]
+        _bullet_colors = [COLOR_GOLD, COLOR_PURPLE, COLOR_GOLD_LIGHT]
+
+        for (icon, label), color in zip(_bullets, _bullet_colors):
+            bullet_row = ctk.CTkFrame(left_center, fg_color="transparent")
+            bullet_row.pack(anchor="w", pady=(0, PADDING_SM))
 
             ctk.CTkLabel(
-                badge,
-                text=" 100% LOCAL  ·  PRIVATE ",
-                font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
-                text_color=COLOR_GOLD,
-            ).place(relx=0.5, rely=0.5, anchor="center")
+                bullet_row,
+                text=icon,
+                font=(FONT_FAMILY, 14, "bold"),
+                text_color=color,
+            ).pack(side="left")
 
-        # ── Separator — GradientDivider ──────────────────────────────
+            ctk.CTkLabel(
+                bullet_row,
+                text=label,
+                font=(FONT_FAMILY, 13),
+                text_color=COLOR_TEXT_SECONDARY,
+            ).pack(side="left")
+
+        # ShimmerBar at the very bottom of the left panel
         try:
-            sep = GradientDivider(inner, height=1)
-            sep.pack(fill="x", pady=(0, PADDING_SM))
+            _left_shimmer = ShimmerBar(left_panel, height=3)
+            _left_shimmer.place(relx=0, rely=1.0, relwidth=1, anchor="sw")
         except Exception:
-            sep = ctk.CTkFrame(inner, height=1, fg_color=COLOR_BORDER)
-            sep.pack(fill="x", pady=(0, PADDING_SM))
-            sep.pack_propagate(False)
+            pass
+
+        # ── Right form panel (58%) ─────────────────────────────────────
+        right_panel = ctk.CTkFrame(
+            self,
+            fg_color=COLOR_BG,
+            corner_radius=0,
+        )
+        right_panel.place(relx=0.42, rely=0, relwidth=0.58, relheight=1.0)
+
+        # Centered inner container
+        inner = ctk.CTkFrame(right_panel, fg_color="transparent", width=380)
+        inner.place(relx=0.5, rely=0.5, anchor="center")
+
+        # ── Form heading ──────────────────────────────────────────────
+        ctk.CTkLabel(
+            inner,
+            text="Create Account",
+            font=(FONT_FAMILY, 22, "bold"),
+            text_color=COLOR_TEXT,
+        ).pack(pady=(0, PADDING_SM))
+
+        ctk.CTkLabel(
+            inner,
+            text="Set up your admin credentials",
+            font=(FONT_FAMILY, 13),
+            text_color=COLOR_TEXT_SECONDARY,
+        ).pack(pady=(0, PADDING_MD))
 
         # ── Form fields ──────────────────────────────────────────────────
         # Username
@@ -409,21 +392,12 @@ class SetupScreen(ctk.CTkFrame):
         self._confirm_entry.bind("<Return>", lambda e: self._handle_create())
         self._password_entry.bind("<KeyRelease>", lambda e: self._update_password_strength())
 
-        # ── Bottom gradient accent ─────────────────────────────────────
-        try:
-            bottom_grad = GradientCanvas(
-                self, colors=GRADIENT_PURPLE_GOLD, height=3, orientation="horizontal"
-            )
-            bottom_grad.pack(fill="x", side="bottom")
-        except Exception:
-            pass
-
     # ── Password strength ─────────────────────────────────────────────
 
     _STRENGTH_LEVELS = [
         (1, "Weak",       [COLOR_ERROR, COLOR_BORDER, COLOR_BORDER, COLOR_BORDER]),
         (2, "Fair",       [COLOR_WARNING, COLOR_WARNING, COLOR_BORDER, COLOR_BORDER]),
-        (3, "Good",       ["#22c55e", "#22c55e", "#22c55e", COLOR_BORDER]),
+        (3, "Good",       [COLOR_SUCCESS, COLOR_SUCCESS, COLOR_SUCCESS, COLOR_BORDER]),
         (4, "Strong",     [COLOR_SUCCESS, COLOR_SUCCESS, COLOR_SUCCESS, COLOR_SUCCESS]),
         (5, "Very Strong", [COLOR_PURPLE, COLOR_PURPLE, COLOR_SUCCESS, COLOR_SUCCESS]),
     ]
@@ -548,109 +522,101 @@ class LoginScreen(ctk.CTkFrame):
             pass
 
     def _build_ui(self):
-        # ── Hero background layer ──────────────────────────────────────
-        _bg_placed = False
+        # ── Left brand panel (42%) ─────────────────────────────────────
+        left_panel = ctk.CTkFrame(
+            self,
+            fg_color=COLOR_PURPLE_DEEP,
+            corner_radius=0,
+        )
+        left_panel.place(relx=0, rely=0, relwidth=0.42, relheight=1.0)
+
+        # Animated gradient background behind left panel content
         try:
-            import os
-            hero_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..", "assets", "hero-bg.png",
-            )
-            if os.path.exists(hero_path):
-                self._hero_bg = HeroBackground(self)
-                self._hero_bg.place(x=0, y=0, relwidth=1, relheight=1)
-                _bg_placed = True
+            _left_bg = AnimatedGradientBG(left_panel)
+            _left_bg.place(relx=0, rely=0, relwidth=1, relheight=1)
         except Exception:
             pass
 
-        if not _bg_placed:
-            try:
-                self._gradient_bg = AnimatedGradientBG(self)
-                self._gradient_bg.place(x=0, y=0, relwidth=1, relheight=1)
-            except Exception:
-                pass
+        # Centered vertical stack inside left panel
+        left_center = ctk.CTkFrame(left_panel, fg_color="transparent")
+        left_center.place(relx=0.5, rely=0.5, anchor="center")
 
-        # ── Centering wrapper ──────────────────────────────────────────
-        outer = ctk.CTkFrame(self, fg_color="transparent")
-        outer.pack(expand=True, fill="both")
+        # IsoCortex wordmark
+        wordmark_row = ctk.CTkFrame(left_center, fg_color="transparent")
+        wordmark_row.pack(pady=(0, PADDING_SM))
 
-        # ── Main card — constrained width, centered ─────────
-        card = FadeInFrame(
-            outer,
-            fg_color=COLOR_BG_CARD,
-            corner_radius=BORDER_RADIUS_XL,
-            border_width=1,
-            border_color=COLOR_BORDER_LIGHT,
-            width=self.CARD_WIDTH,
+        ctk.CTkLabel(
+            wordmark_row,
+            text="Iso",
+            font=(FONT_FAMILY_DISPLAY, 34, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            wordmark_row,
+            text="Cortex",
+            font=(FONT_FAMILY_DISPLAY, 34, "bold"),
+            text_color=COLOR_GOLD,
+        ).pack(side="left")
+
+        # Tagline
+        ctk.CTkLabel(
+            left_center,
+            text="Sign in to continue",
+            font=(FONT_FAMILY, 14),
+            text_color=COLOR_TEXT_SECONDARY,
+        ).pack(pady=(0, PADDING_LG))
+
+        # Decorative glowing orb
+        orb = ctk.CTkFrame(
+            left_center,
+            width=120,
+            height=120,
+            corner_radius=60,
+            fg_color=COLOR_PURPLE_DEEP,
+            border_width=2,
+            border_color=COLOR_PURPLE,
         )
-        card.pack(expand=True, padx=PADDING_XL, pady=PADDING_LG)
+        orb.pack(pady=(PADDING_SM, 0))
+        orb.pack_propagate(False)
 
-        # ── Gradient accent bar at top ─────────────────────────────────
-        grad = create_gradient_bar(card, height=4)
-        grad.pack(fill="x")
+        # Inner glow highlight
+        orb_inner = ctk.CTkFrame(
+            orb,
+            width=80,
+            height=80,
+            corner_radius=40,
+            fg_color=COLOR_PURPLE_DARK,
+        )
+        orb_inner.place(relx=0.5, rely=0.5, anchor="center")
+        orb_inner.pack_propagate(False)
 
-        # ── Inner content ───────────────────────────────────────────
-        inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", padx=PADDING_LG, pady=(PADDING_MD, PADDING_MD))
-
-        # ── Logo ──────────────────────────────────────────────────────
+        # ShimmerBar at the very bottom of the left panel
         try:
-            logo_frame = ctk.CTkFrame(inner, fg_color="transparent")
-            logo_frame.pack(pady=(PADDING, PADDING_SM))
-
-            logo_row = ctk.CTkFrame(logo_frame, fg_color="transparent")
-            logo_row.pack()
-
-            self._animated_logo = AnimatedLogo(logo_row, logo_size=32)
-            self._animated_logo.pack(side="left", padx=(0, PADDING_SM))
-
-            ctk.CTkLabel(
-                logo_row,
-                text="Iso",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_PURPLE,
-            ).pack(side="left")
-
-            ctk.CTkLabel(
-                logo_row,
-                text="Cortex",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_GOLD,
-            ).pack(side="left")
+            _left_shimmer = ShimmerBar(left_panel, height=3)
+            _left_shimmer.place(relx=0, rely=1.0, relwidth=1, anchor="sw")
         except Exception:
-            logo_frame = ctk.CTkFrame(inner, fg_color="transparent")
-            logo_frame.pack(pady=(PADDING, PADDING_SM))
+            pass
 
-            ctk.CTkLabel(
-                logo_frame,
-                text="Iso",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_PURPLE,
-            ).pack(side="left")
+        # ── Right form panel (58%) ─────────────────────────────────────
+        right_panel = ctk.CTkFrame(
+            self,
+            fg_color=COLOR_BG,
+            corner_radius=0,
+        )
+        right_panel.place(relx=0.42, rely=0, relwidth=0.58, relheight=1.0)
 
-            ctk.CTkLabel(
-                logo_frame,
-                text="Cortex",
-                font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
-                text_color=COLOR_GOLD,
-            ).pack(side="left")
+        # Centered inner container
+        inner = ctk.CTkFrame(right_panel, fg_color="transparent", width=360)
+        inner.place(relx=0.5, rely=0.5, anchor="center")
 
-        # ── Welcome text ──────────────────────────────────────────────
+        # ── Form heading ──────────────────────────────────────────────
         ctk.CTkLabel(
             inner,
             text="Welcome back",
-            font=(FONT_FAMILY, FONT_SIZE_MEDIUM),
-            text_color=COLOR_TEXT_SECONDARY,
-        ).pack(pady=(0, PADDING))
-
-        # ── Separator — GradientDivider ──────────────────────────────
-        try:
-            sep = GradientDivider(inner, height=1)
-            sep.pack(fill="x", pady=(0, PADDING_MD))
-        except Exception:
-            sep = ctk.CTkFrame(inner, height=1, fg_color=COLOR_BORDER)
-            sep.pack(fill="x", pady=(0, PADDING_MD))
-            sep.pack_propagate(False)
+            font=(FONT_FAMILY, 22, "bold"),
+            text_color=COLOR_TEXT,
+        ).pack(pady=(0, PADDING_MD))
 
         # ── Form fields ──────────────────────────────────────────────────
         # Username / Email
@@ -761,15 +727,6 @@ class LoginScreen(ctk.CTkFrame):
             command=self._show_reset_confirm,
         )
         self._reset_btn.pack(fill="x")
-
-        # ── Bottom gradient accent ─────────────────────────────────────
-        try:
-            bottom_grad = GradientCanvas(
-                self, colors=GRADIENT_PURPLE_GOLD, height=3, orientation="horizontal"
-            )
-            bottom_grad.pack(fill="x", side="bottom")
-        except Exception:
-            pass
 
     # ── Navigation ────────────────────────────────────────────────────
 

@@ -13,8 +13,9 @@ import customtkinter as ctk
 
 from desktop_app.theme import (
     COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_PURPLE,
-    COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM, COLOR_ERROR,
-    FONT_FAMILY, FONT_SIZE_SMALL, SIDEBAR_WIDTH,
+    COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM, COLOR_ERROR, COLOR_BORDER,
+    FONT_FAMILY, FONT_FAMILY_DISPLAY, FONT_SIZE_SMALL, SIDEBAR_WIDTH,
+    COLOR_PURPLE_LIGHT, _blend_colors,
     PADDING, PADDING_SM, BORDER_RADIUS_SM,
 )
 
@@ -61,8 +62,8 @@ class Sidebar(ctk.CTkFrame):
         ctk.CTkLabel(
             logo_frame,
             text="IsoCortex",
-            font=(FONT_FAMILY, 18, "bold"),
-            text_color=COLOR_PURPLE,
+            font=(FONT_FAMILY_DISPLAY, 19, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
             anchor="w",
         ).pack(side="left", padx=(4, 0))
 
@@ -75,7 +76,7 @@ class Sidebar(ctk.CTkFrame):
         ).pack(side="left", padx=(8, 0), pady=(4, 0))
 
         # ── Separator ──────────────────────────────────────────────
-        sep = ctk.CTkFrame(self, height=1, fg_color="#1e1e30")
+        sep = ctk.CTkFrame(self, height=1, fg_color=COLOR_BORDER)
         sep.pack(fill="x", padx=PADDING, pady=PADDING_SM)
 
         # ── Navigation buttons ─────────────────────────────────────
@@ -118,7 +119,7 @@ class Sidebar(ctk.CTkFrame):
         )
         user_frame.pack(fill="x", padx=PADDING, pady=PADDING)
 
-        sep2 = ctk.CTkFrame(self, height=1, fg_color="#1e1e30")
+        sep2 = ctk.CTkFrame(self, height=1, fg_color=COLOR_BORDER)
         sep2.pack(fill="x", padx=PADDING, pady=(0, PADDING_SM))
 
         self._user_label = ctk.CTkLabel(
@@ -135,7 +136,7 @@ class Sidebar(ctk.CTkFrame):
             text="Sign Out",
             font=(FONT_FAMILY, FONT_SIZE_SMALL),
             fg_color=COLOR_BG_ELEVATED,
-            hover_color="#3a1515",
+            hover_color=_blend_colors(COLOR_BG_ELEVATED, COLOR_ERROR, 0.22),
             text_color=COLOR_ERROR,
             height=30,
             corner_radius=BORDER_RADIUS_SM,

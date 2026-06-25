@@ -22,7 +22,9 @@ Design language:
 """
 
 import customtkinter as ctk
+import logging
 import threading
+import tkinter as tk
 
 from desktop_app.theme import (
     COLOR_BG, COLOR_BG_CARD, COLOR_BG_ELEVATED, COLOR_BG_HOVER,
@@ -32,7 +34,7 @@ from desktop_app.theme import (
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
     COLOR_SHADOW, COLOR_SURFACE_1,
-    FONT_FAMILY, FONT_FAMILY_MONO,
+    FONT_FAMILY, FONT_FAMILY_DISPLAY, FONT_FAMILY_MONO,
     FONT_SIZE_TITLE, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
@@ -41,6 +43,7 @@ from desktop_app.theme import (
     FadeInFrame, create_badge,
     ANIM_DELAY_200, ANIM_DELAY_400, ANIM_DELAY_600, ANIM_DELAY_800,
 )
+from desktop_app.workers import WorkerThread
 
 
 class SettingsScreen(ctk.CTkFrame):
@@ -132,7 +135,7 @@ class SettingsScreen(ctk.CTkFrame):
         ctk.CTkLabel(
             title_block,
             text="Settings",
-            font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
+            font=(FONT_FAMILY_DISPLAY, FONT_SIZE_TITLE, "bold"),
             text_color=COLOR_TEXT,
             anchor="w",
         ).pack(anchor="w")
@@ -284,6 +287,83 @@ class SettingsScreen(ctk.CTkFrame):
                 sep.pack(fill="x")
                 sep.pack_propagate(False)
 
+        # OCR status row
+        try:
+            from desktop_app.ocr import get_ocr_status
+            ocr_st = get_ocr_status()
+        except Exception:
+            ocr_st = {"available": False, "install_cmd": ""}
+
+        ocr_row = ctk.CTkFrame(info_inner, fg_color=COLOR_BG_ELEVATED, corner_radius=BORDER_RADIUS_SM)
+        ocr_row.pack(fill="x", pady=3)
+
+        ocr_row_content = ctk.CTkFrame(ocr_row, fg_color="transparent")
+        ocr_row_content.pack(fill="x", padx=PADDING_MD, pady=PADDING_SM)
+
+        if ocr_st["available"]:
+            ocr_dot = ctk.CTkLabel(ocr_row_content, text="\u25cf", font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                                    text_color=COLOR_SUCCESS, width=20)
+            ocr_dot.pack(side="left")
+            ocr_text = "OCR: Active \u2014 image indexing enabled"
+            ocr_color = COLOR_SUCCESS
+        else:
+            ocr_dot = ctk.CTkLabel(ocr_row_content, text="\u25cf", font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                                    text_color=COLOR_WARNING, width=20)
+            ocr_dot.pack(side="left")
+            ocr_text = "OCR: Not installed \u2014 images will be skipped"
+            ocr_color = COLOR_WARNING
+
+        ctk.CTkLabel(
+            ocr_row_content, text=ocr_text,
+            font=(FONT_FAMILY, FONT_SIZE_SMALL), text_color=ocr_color, anchor="w",
+        ).pack(side="left")
+
+        if not ocr_st["available"] and ocr_st["install_cmd"]:
+            def _show_ocr_help():
+                dialog = ctk.CTkToplevel(self)
+                dialog.title("Install OCR")
+                dialog.geometry("440x180")
+                try:
+                    dialog.configure(fg_color=COLOR_BG)
+                except Exception:
+                    pass
+                dialog.transient(self)
+                dialog.grab_set()
+
+                content = ctk.CTkFrame(dialog, fg_color="transparent")
+                content.pack(fill="both", expand=True, padx=PADDING_LG, pady=PADDING_LG)
+
+                ctk.CTkLabel(
+                    content,
+                    text="Install Tesseract OCR",
+                    font=(FONT_FAMILY, FONT_SIZE_LARGE, "bold"),
+                    text_color=COLOR_WARNING, anchor="w",
+                ).pack(fill="x", pady=(0, PADDING))
+
+                ctk.CTkLabel(
+                    content,
+                    text=f"Run this command to enable image indexing:\n\n{ocr_st['install_cmd']}",
+                    font=(FONT_FAMILY_MONO, FONT_SIZE_SMALL),
+                    text_color=COLOR_TEXT_SECONDARY, anchor="w", justify="left",
+                ).pack(fill="x", pady=(0, PADDING_LG))
+
+                ctk.CTkButton(
+                    content, text="Close",
+                    font=(FONT_FAMILY, FONT_SIZE_NORMAL),
+                    fg_color=COLOR_BG_ELEVATED, hover_color=COLOR_BG_HOVER,
+                    text_color=COLOR_TEXT, height=36, corner_radius=BORDER_RADIUS_SM,
+                    command=dialog.destroy,
+                ).pack(anchor="e")
+
+            help_btn = ctk.CTkButton(
+                ocr_row_content, text="?",
+                font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+                fg_color=COLOR_WARNING, hover_color="#d4a017",
+                text_color="#1a1a2e", width=24, height=24,
+                corner_radius=12, command=_show_ocr_help,
+            )
+            help_btn.pack(side="right")
+
         # GradientDivider after System Information
         GradientDivider(sysinfo_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
@@ -342,6 +422,19 @@ class SettingsScreen(ctk.CTkFrame):
                 wraplength=400,
             ).pack(side="left", fill="x")
 
+        # ── Index list with Re-index buttons ─────────────────────
+        self._idx_reindex_status = ctk.CTkLabel(
+            idx_inner, text="",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+        )
+        self._idx_reindex_status.pack(fill="x", pady=(PADDING_SM, 0))
+
+        self._index_list_frame = ctk.CTkFrame(idx_inner, fg_color="transparent")
+        self._index_list_frame.pack(fill="x", pady=(PADDING_SM, 0))
+
+        self.after(200, self._refresh_index_list)
+
         # GradientDivider after Index Management
         GradientDivider(index_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
@@ -395,6 +488,100 @@ class SettingsScreen(ctk.CTkFrame):
 
         # GradientDivider after Watch Folders
         GradientDivider(watch_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
+
+        # ════════════════════════════════════════════════════════════
+        # 4b · EXCLUSION RULES  (FadeInFrame delay=ANIM_DELAY_800)
+        # ════════════════════════════════════════════════════════════
+        excl_fade = FadeInFrame(
+            scroll, fg_color="transparent", delay=ANIM_DELAY_800,
+        )
+        excl_fade.pack(fill="x")
+
+        self._section_header(excl_fade, "Exclusion Rules")
+
+        excl_inner = self._content_card(excl_fade, glow_color=COLOR_WARNING)
+
+        ctk.CTkLabel(
+            excl_inner,
+            text="Files and folders matching these patterns will be skipped during indexing and folder watching.",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_TEXT_SECONDARY,
+            anchor="w",
+            wraplength=580,
+        ).pack(fill="x", pady=(0, PADDING))
+
+        try:
+            current_patterns = self._app.engine.get_exclusion_patterns()
+        except Exception:
+            current_patterns = []
+
+        self._excl_text_widget = tk.Text(
+            excl_inner,
+            height=8,
+            font=(FONT_FAMILY_MONO, FONT_SIZE_SMALL),
+            fg=COLOR_TEXT,
+            bg=COLOR_BG_ELEVATED,
+            insertbackground=COLOR_TEXT,
+            selectbackground=COLOR_PURPLE,
+            selectforeground=COLOR_TEXT,
+            relief="flat",
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground=COLOR_BORDER,
+            highlightcolor=COLOR_PURPLE,
+            wrap="word",
+            padx=PADDING_SM,
+            pady=PADDING_SM,
+        )
+        self._excl_text_widget.pack(fill="x", pady=(0, PADDING_SM))
+        if current_patterns:
+            self._excl_text_widget.insert("1.0", "\n".join(current_patterns))
+
+        ctk.CTkLabel(
+            excl_inner,
+            text="One glob pattern per line. Examples: .git, node_modules, *.tmp, **/.env",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+        ).pack(fill="x", pady=(0, PADDING))
+
+        excl_btn_row = ctk.CTkFrame(excl_inner, fg_color="transparent")
+        excl_btn_row.pack(fill="x", pady=(PADDING_SM, 0))
+
+        ctk.CTkButton(
+            excl_btn_row,
+            text="Save Rules",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+            fg_color=COLOR_PURPLE, hover_color=COLOR_PURPLE_DARK,
+            text_color=COLOR_TEXT,
+            height=32, width=120,
+            corner_radius=BORDER_RADIUS_SM,
+            command=self._save_exclusion_rules,
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            excl_btn_row,
+            text="Reset to Defaults",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            fg_color="transparent",
+            hover_color=COLOR_BG_HOVER,
+            text_color=COLOR_TEXT_SECONDARY,
+            height=32, width=140,
+            corner_radius=BORDER_RADIUS_SM,
+            border_width=1, border_color=COLOR_BORDER,
+            command=self._reset_exclusion_rules,
+        ).pack(side="left", padx=(PADDING_SM, 0))
+
+        self._excl_status_label = ctk.CTkLabel(
+            excl_inner, text="",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+        )
+        self._excl_status_label.pack(fill="x", pady=(PADDING_SM, 0))
+
+        # GradientDivider after Exclusion Rules
+        GradientDivider(excl_fade, height=1).pack(fill="x", pady=(PADDING_MD, 0))
 
         # ════════════════════════════════════════════════════════════
         # 5 · SECURITY  (FadeInFrame delay=ANIM_DELAY_800)
@@ -902,6 +1089,177 @@ class SettingsScreen(ctk.CTkFrame):
             return self._app._watcher
         except AttributeError:
             return None
+
+    # ────────────────────────────────────────────────────────────────
+    # Exclusion Rules
+    # ────────────────────────────────────────────────────────────────
+
+    def _save_exclusion_rules(self):
+        text = self._excl_text_widget.get("1.0", "end").strip()
+        patterns = [p.strip() for p in text.split("\n") if p.strip()]
+        self._app.engine.set_exclusion_patterns(patterns)
+        try:
+            self._excl_status_label.configure(text=f"Saved {len(patterns)} rules", text_color=COLOR_SUCCESS)
+            self._app.show_toast(f"Exclusion rules saved ({len(patterns)} patterns)", "success")
+        except Exception:
+            pass
+
+    def _reset_exclusion_rules(self):
+        defaults = [
+            ".git", ".git/**", "node_modules", "node_modules/**",
+            "__pycache__", "*.pyc", ".DS_Store", "*.tmp", "*.log",
+            ".env", "*.env", "venv/**", ".venv/**",
+        ]
+        self._excl_text_widget.delete("1.0", "end")
+        self._excl_text_widget.insert("1.0", "\n".join(defaults))
+        self._app.engine.set_exclusion_patterns(defaults)
+        try:
+            self._excl_status_label.configure(text="Reset to default rules", text_color=COLOR_SUCCESS)
+        except Exception:
+            pass
+
+    # ────────────────────────────────────────────────────────────────
+    # Index Re-indexing
+    # ────────────────────────────────────────────────────────────────
+
+    _logger = logging.getLogger("IsoCortex.settings")
+
+    def _refresh_index_list(self):
+        """Populate the index list with name, vector count, and Re-index button."""
+        for w in self._index_list_frame.winfo_children():
+            w.destroy()
+
+        try:
+            indexes = self._app.engine.list_indexes()
+        except Exception:
+            indexes = []
+
+        if not indexes:
+            ctk.CTkLabel(
+                self._index_list_frame,
+                text="No indexes found",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+                anchor="w",
+            ).pack(fill="x", pady=(PADDING_SM, 0))
+            return
+
+        for idx_info in indexes:
+            row = ctk.CTkFrame(
+                self._index_list_frame,
+                fg_color=COLOR_BG_ELEVATED,
+                corner_radius=BORDER_RADIUS_SM,
+            )
+            row.pack(fill="x", pady=2)
+
+            row_content = ctk.CTkFrame(row, fg_color="transparent")
+            row_content.pack(fill="x", padx=PADDING_MD, pady=PADDING_SM)
+
+            ctk.CTkLabel(
+                row_content, text=idx_info.name,
+                font=(FONT_FAMILY_MONO, FONT_SIZE_SMALL),
+                text_color=COLOR_GOLD,
+                anchor="w",
+            ).pack(side="left")
+
+            ctk.CTkLabel(
+                row_content,
+                text=f"  \u00B7  {idx_info.vector_count} vectors  \u00B7  {idx_info.index_size_mb:.1f} MB",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+                anchor="w",
+            ).pack(side="left")
+
+            btn = ctk.CTkButton(
+                row_content, text="Re-index",
+                font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+                fg_color=COLOR_PURPLE_DARK,
+                hover_color=COLOR_PURPLE,
+                text_color=COLOR_TEXT,
+                height=26, width=70,
+                corner_radius=BORDER_RADIUS_SM,
+            )
+            btn.pack(side="right")
+            # Bind click after btn is assigned (Python 3.14 safe)
+            captured_name = idx_info.name
+            captured_btn = btn
+            btn.configure(command=lambda: self._reindex_index(captured_name, captured_btn))
+
+    def _reindex_index(self, index_name: str, btn):
+        """Re-index all files in a given index from scratch."""
+        btn.configure(state="disabled", text="Working\u2026")
+        try:
+            self._idx_reindex_status.configure(
+                text=f"Collecting files for '{index_name}'\u2026",
+                text_color=COLOR_GOLD,
+            )
+        except Exception:
+            pass
+
+        def _collect_and_reindex():
+            engine = self._app.engine
+            conn = engine._get_db()
+            rows = conn.execute(
+                "SELECT DISTINCT file_path FROM documents WHERE index_name = ?",
+                (index_name,),
+            ).fetchall()
+            file_paths = [r[0] for r in rows if r[0]]
+            if not file_paths:
+                return {"files_processed": 0, "total_vectors": 0, "elapsed_seconds": 0, "total_chunks": 0}
+
+            # Delete all document records for this index
+            conn.execute(
+                "DELETE FROM documents WHERE index_name = ?",
+                (index_name,),
+            )
+            conn.commit()
+
+            # Re-ingest
+            result = engine.ingest_files(index_name, file_paths)
+            return {
+                "files_processed": result.files_processed,
+                "total_chunks": result.total_chunks,
+                "total_vectors": result.total_vectors,
+                "elapsed_seconds": result.elapsed_seconds,
+            }
+
+        def _on_done(stats):
+            try:
+                btn.configure(state="normal", text="Re-index")
+                self._idx_reindex_status.configure(
+                    text=(
+                        f"\u2713  Re-indexed '{index_name}': "
+                        f"{stats['files_processed']} files \u00B7 "
+                        f"{stats['total_vectors']} vectors ({stats['elapsed_seconds']:.1f}s)"
+                    ),
+                    text_color=COLOR_SUCCESS,
+                )
+                self._refresh_index_list()
+                self._app.show_toast(
+                    f"Re-indexed '{index_name}': {stats['total_vectors']} vectors",
+                    "success",
+                )
+            except Exception:
+                pass
+
+        def _on_error(error: str):
+            try:
+                btn.configure(state="normal", text="Re-index")
+                self._idx_reindex_status.configure(
+                    text=f"\u2717  Re-index failed: {error}",
+                    text_color=COLOR_ERROR,
+                )
+            except Exception:
+                pass
+
+        worker = WorkerThread(
+            target=_collect_and_reindex,
+            on_success=_on_done,
+            on_error=_on_error,
+            name="IndexReindexWorker",
+        )
+        worker.set_app_ref(self._app)
+        worker.start()
 
     def _refresh_plugins_list(self):
         """Refresh the plugin list in settings."""

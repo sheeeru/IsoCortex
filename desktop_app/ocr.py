@@ -159,3 +159,33 @@ def extract_with_ocr(file_path: Path, lang: str = "eng") -> str:
         return ocr_pdf(file_path, lang=lang)
     else:
         return ""
+
+
+_TESSERACT_AVAILABLE: bool | None = None  # cached after first check
+
+def is_tesseract_available() -> bool:
+    """Check if the Tesseract binary is installed and accessible (cached)."""
+    global _TESSERACT_AVAILABLE
+    if _TESSERACT_AVAILABLE is None:
+        try:
+            import shutil
+            _TESSERACT_AVAILABLE = shutil.which("tesseract") is not None
+        except Exception:
+            _TESSERACT_AVAILABLE = False
+    return _TESSERACT_AVAILABLE
+
+
+def get_ocr_status() -> dict:
+    """Return OCR availability status and platform-specific install instructions."""
+    import sys
+    available = is_tesseract_available()
+    if sys.platform == "darwin":
+        install_cmd = "brew install tesseract"
+    elif sys.platform == "win32":
+        install_cmd = "Download from: github.com/UB-Mannheim/tesseract/wiki"
+    else:
+        install_cmd = "sudo apt install tesseract-ocr"
+    return {
+        "available": available,
+        "install_cmd": install_cmd,
+    }

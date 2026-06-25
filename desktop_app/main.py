@@ -51,7 +51,7 @@ if __name__ == "__main__":
         dl_root.title("IsoCortex — Downloading AI Model")
         dl_root.geometry("520x280")
         dl_root.resizable(False, False)
-        dl_root.configure(fg_color="#0a0a12")
+        dl_root.configure(fg_color="#0c0c11")
 
         # Set IsoCortex icon on download window
         _assets = Path(__file__).parent / "assets"
@@ -74,14 +74,14 @@ if __name__ == "__main__":
         y = (dl_root.winfo_screenheight() // 2) - 140
         dl_root.geometry(f"+{x}+{y}")
 
-        frame = ctk.CTkFrame(dl_root, fg_color="#0a0a12")
+        frame = ctk.CTkFrame(dl_root, fg_color="#0c0c11")
         frame.pack(fill="both", expand=True, padx=40, pady=30)
 
         ctk.CTkLabel(
             frame,
             text="IsoCortex AI Setup",
             font=("Segoe UI", 20, "bold"),
-            text_color="#eaeaf2",
+            text_color="#f3f2f8",
         ).pack(pady=(0, 8))
 
         ctk.CTkLabel(
@@ -89,14 +89,14 @@ if __name__ == "__main__":
             text="Downloading the AI model for the first time.\n"
                  "This is a one-time step (~950 MB).",
             font=("Segoe UI", 12),
-            text_color="#8888a8",
+            text_color="#a7a6b8",
             justify="center",
         ).pack(pady=(0, 20))
 
         # Progress bar
         progress = ctk.CTkProgressBar(
             frame, width=440, height=8,
-            fg_color="#181830", progress_color="#7c3aed",
+            fg_color="#1c1c26", progress_color="#7c5ce6",
         )
         progress.pack(pady=(0, 8))
         progress.set(0)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
             frame,
             text="Preparing download...",
             font=("Segoe UI", 11),
-            text_color="#505068",
+            text_color="#6c6b7e",
         )
         status_label.pack()
 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
                     pass
                 retry_btn[0] = None
             progress.set(0)
-            status_label.configure(text="Preparing download...", text_color="#505068")
+            status_label.configure(text="Preparing download...", text_color="#6c6b7e")
             download_error[0] = None
             download_done.clear()
             t = threading.Thread(target=_download_thread, daemon=True)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         def _finish_download():
             try:
                 progress.set(1.0)
-                status_label.configure(text="Download complete!", text_color="#22c55e")
+                status_label.configure(text="Download complete!", text_color="#3dcb8e")
             except Exception:
                 pass
             download_done.set()
@@ -168,7 +168,7 @@ if __name__ == "__main__":
             try:
                 status_label.configure(
                     text=f"Download failed: {error_msg}",
-                    text_color="#ef4444",
+                    text_color="#e5575f",
                 )
                 btn = ctk.CTkButton(
                     frame,
@@ -176,8 +176,8 @@ if __name__ == "__main__":
                     font=("Segoe UI", 12),
                     width=200,
                     height=36,
-                    fg_color="#7c3aed",
-                    hover_color="#6d28d9",
+                    fg_color="#7c5ce6",
+                    hover_color="#6646d4",
                     command=_start_download,
                 )
                 btn.pack(pady=(16, 0))
@@ -205,7 +205,7 @@ if __name__ == "__main__":
         emb_root.title("IsoCortex — Downloading Embedding Model")
         emb_root.geometry("520x280")
         emb_root.resizable(False, False)
-        emb_root.configure(fg_color="#0a0a12")
+        emb_root.configure(fg_color="#0c0c11")
 
         # Set icon
         _assets = Path(__file__).parent / "assets"
@@ -227,14 +227,14 @@ if __name__ == "__main__":
         y = (emb_root.winfo_screenheight() // 2) - 140
         emb_root.geometry(f"+{x}+{y}")
 
-        frame = ctk.CTkFrame(emb_root, fg_color="#0a0a12")
+        frame = ctk.CTkFrame(emb_root, fg_color="#0c0c11")
         frame.pack(fill="both", expand=True, padx=40, pady=30)
 
         ctk.CTkLabel(
             frame,
             text="IsoCortex AI Setup",
             font=("Segoe UI", 20, "bold"),
-            text_color="#eaeaf2",
+            text_color="#f3f2f8",
         ).pack(pady=(0, 8))
 
         ctk.CTkLabel(
@@ -242,7 +242,7 @@ if __name__ == "__main__":
             text="Downloading the embedding model (~90 MB).\n"
                  "This is needed for document search and is a one-time step.",
             font=("Segoe UI", 12),
-            text_color="#8888a8",
+            text_color="#a7a6b8",
             justify="center",
         ).pack(pady=(0, 20))
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
             frame,
             text="Preparing...",
             font=("Segoe UI", 11),
-            text_color="#505068",
+            text_color="#6c6b7e",
         )
         emb_status.pack(pady=(10, 0))
 
@@ -283,7 +283,7 @@ if __name__ == "__main__":
                 emb_retry_btn[0] = None
             emb_done.clear()
             emb_error[0] = None
-            emb_status.configure(text="Downloading...", text_color="#505068")
+            emb_status.configure(text="Downloading...", text_color="#6c6b7e")
             _spin()
             t = threading.Thread(target=_emb_download_thread, daemon=True)
             t.start()
@@ -309,7 +309,7 @@ if __name__ == "__main__":
 
         def _finish_emb():
             try:
-                emb_status.configure(text="Embedding model ready!", text_color="#22c55e")
+                emb_status.configure(text="Embedding model ready!", text_color="#3dcb8e")
             except Exception:
                 pass
             emb_done.set()
@@ -319,7 +319,7 @@ if __name__ == "__main__":
             try:
                 emb_status.configure(
                     text=f"Embedding download failed: {error_msg}",
-                    text_color="#ef4444",
+                    text_color="#e5575f",
                 )
                 btn = ctk.CTkButton(
                     frame,
@@ -327,8 +327,8 @@ if __name__ == "__main__":
                     font=("Segoe UI", 12),
                     width=200,
                     height=36,
-                    fg_color="#7c3aed",
-                    hover_color="#6d28d9",
+                    fg_color="#7c5ce6",
+                    hover_color="#6646d4",
                     command=_start_emb_download,
                 )
                 btn.pack(pady=(16, 0))

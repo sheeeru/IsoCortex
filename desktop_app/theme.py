@@ -110,68 +110,76 @@ def _apply_colors(mode: str):
     global COLOR_GLASS_BG, COLOR_GLASS_BORDER
 
     if mode == "light":
-        COLOR_BG_DARKEST   = "#d8d8e8"
-        COLOR_BG            = "#eeeef6"
+        # ── "Porcelain" — warm paper light mode ───────────────────────
+        COLOR_BG_DARKEST   = "#dcdae8"
+        COLOR_BG            = "#f4f3f9"
         COLOR_BG_CARD       = "#ffffff"
-        COLOR_BG_ELEVATED   = "#e8e8f2"
-        COLOR_BG_HOVER      = "#dddde8"
-        COLOR_TEXT           = "#1a1a2e"
-        COLOR_TEXT_SECONDARY = "#5c5c7a"
-        COLOR_TEXT_DIM      = "#9898b0"
-        COLOR_BORDER        = "#c8c8d8"
-        COLOR_BORDER_LIGHT  = "#d8d8e8"
-        COLOR_GOLD_BTN_TEXT = "#1a1a2e"
-        COLOR_SIDEBAR_BG    = "#e4e4f0"
-        COLOR_CARD_GLASS    = "#f8f8ff"
-        COLOR_INPUT_BG      = "#f0f0f8"
-        COLOR_SHADOW        = "#c0c0d4"
-        COLOR_SURFACE_1     = "#f4f4fa"
-        COLOR_SURFACE_2     = "#eaeaf4"
-        COLOR_GLASS_BG      = "#e8e0f8"
-        COLOR_GLASS_BORDER  = "#c8b8e8"
+        COLOR_BG_ELEVATED   = "#edebf5"
+        COLOR_BG_HOVER      = "#e4e1f0"
+        COLOR_TEXT           = "#1a1822"
+        COLOR_TEXT_SECONDARY = "#56546a"
+        COLOR_TEXT_DIM      = "#8d8ba0"
+        COLOR_BORDER        = "#dcd9e8"
+        COLOR_BORDER_LIGHT  = "#e8e5f1"
+        COLOR_GOLD_BTN_TEXT = "#2c1d08"
+        COLOR_SIDEBAR_BG    = "#edebf5"
+        COLOR_CARD_GLASS    = "#faf9fe"
+        COLOR_INPUT_BG      = "#f0eef8"
+        COLOR_SHADOW        = "#c5c2d6"
+        COLOR_SURFACE_1     = "#f8f7fd"
+        COLOR_SURFACE_2     = "#eeecf6"
+        COLOR_GLASS_BG      = "#f8f6fd"
+        COLOR_GLASS_BORDER  = "#dccfee"
     else:
-        COLOR_BG_DARKEST   = "#04040a"
-        COLOR_BG            = "#0a0a12"
-        COLOR_BG_CARD       = "#111120"
-        COLOR_BG_ELEVATED   = "#181830"
-        COLOR_BG_HOVER      = "#20203c"
-        COLOR_TEXT           = "#eaeaf2"
-        COLOR_TEXT_SECONDARY = "#8888a8"
-        COLOR_TEXT_DIM      = "#505068"
-        COLOR_BORDER        = "#1c1c34"
-        COLOR_BORDER_LIGHT  = "#242440"
-        COLOR_GOLD_BTN_TEXT = "#0a0a12"
-        COLOR_SIDEBAR_BG    = "#0c0c18"
-        COLOR_CARD_GLASS    = "#141428"
-        COLOR_INPUT_BG      = "#161630"
-        COLOR_SHADOW        = "#060610"
-        COLOR_SURFACE_1     = "#0f0f1e"
-        COLOR_SURFACE_2     = "#14142a"
-        COLOR_GLASS_BG      = "#1a1838"
-        COLOR_GLASS_BORDER  = "#2a2858"
+        # ── "Obsidian" — neutral warm-ink dark mode ───────────────────
+        COLOR_BG_DARKEST   = "#070709"
+        COLOR_BG            = "#0c0c11"
+        COLOR_BG_CARD       = "#15151d"
+        COLOR_BG_ELEVATED   = "#1c1c26"
+        COLOR_BG_HOVER      = "#24242f"
+        COLOR_TEXT           = "#f3f2f8"
+        COLOR_TEXT_SECONDARY = "#a7a6b8"
+        COLOR_TEXT_DIM      = "#6c6b7e"
+        COLOR_BORDER        = "#222230"
+        COLOR_BORDER_LIGHT  = "#31313f"
+        COLOR_GOLD_BTN_TEXT = "#1a1206"
+        COLOR_SIDEBAR_BG    = "#08080c"
+        COLOR_CARD_GLASS    = "#16161f"
+        COLOR_INPUT_BG      = "#101017"
+        COLOR_SHADOW        = "#000000"
+        COLOR_SURFACE_1     = "#101015"
+        COLOR_SURFACE_2     = "#17171f"
+        COLOR_GLASS_BG      = "#15151e"
+        COLOR_GLASS_BORDER  = "#2a2a38"
 
 
 # ══════════════════════════════════════════════════════════════════════
 # Brand Colors (mode-independent)
 # ══════════════════════════════════════════════════════════════════════
 
-COLOR_PURPLE        = "#7c3aed"
-COLOR_PURPLE_DARK   = "#5b21b6"
-COLOR_PURPLE_LIGHT  = "#a78bfa"
-COLOR_PURPLE_GLOW   = "#7c3aed"
-COLOR_PURPLE_DEEP   = "#4c1d95"
-COLOR_GOLD          = "#d4a017"
-COLOR_GOLD_LIGHT    = "#eab308"
-COLOR_GOLD_DIM      = "#a17e12"
+# Primary — refined royal amethyst (premium, slightly blue-violet; not neon magenta)
+COLOR_PURPLE        = "#7c5ce6"
+COLOR_PURPLE_DARK   = "#6646d4"
+COLOR_PURPLE_LIGHT  = "#b9a6f5"
+COLOR_PURPLE_GLOW   = "#7c5ce6"
+COLOR_PURPLE_DEEP   = "#251c49"
+# Secondary — luxe champagne brass (reads as warm metal, not a warning amber)
+COLOR_GOLD          = "#e3b264"
+COLOR_GOLD_LIGHT    = "#f4d49a"
+COLOR_GOLD_DIM      = "#5e4422"
+COLOR_CYAN          = "#56c7d6"
+COLOR_CYAN_DIM      = "#163e46"
 
-COLOR_SUCCESS       = "#22c55e"
-COLOR_WARNING       = "#f59e0b"
-COLOR_ERROR         = "#ef4444"
-COLOR_INFO          = "#3b82f6"
+COLOR_SUCCESS       = "#3dcb8e"
+COLOR_WARNING       = "#e0a33e"
+COLOR_ERROR         = "#e5575f"
+COLOR_INFO          = "#6e8bf2"
 
-GRADIENT_PURPLE_GOLD = ["#7c3aed", "#d4a017"]
-GRADIENT_SIDEBAR     = ["#0a0520", "#1a0a3e", "#0a0520"]
-GRADIENT_HERO_DARK   = ["#4c1d95", "#7c3aed", "#d4a017"]
+# Gradients — eased through a mauve/rose midpoint so purple→gold reads
+# handcrafted and cohesive instead of a hard two-stop rainbow.
+GRADIENT_PURPLE_GOLD = ["#7c5ce6", "#9d6fd0", "#c98fa8", "#e3b264"]
+GRADIENT_SIDEBAR     = ["#08080c", "#0e0b16", "#08080c"]
+GRADIENT_HERO_DARK   = ["#201838", "#6a48d7", "#e3b264"]
 
 # Animation timing constants (from website globals.css)
 ANIM_SHIMMER_DURATION  = 3000  # 3s shimmer animation
@@ -188,27 +196,47 @@ ANIM_DELAY_800 = 800
 # Typography
 # ══════════════════════════════════════════════════════════════════════
 
-FONT_FAMILY         = "Segoe UI"
-FONT_FAMILY_MONO    = "Consolas"
-FONT_SIZE_XXS       = 9
-FONT_SIZE_SMALL     = 11
-FONT_SIZE_NORMAL    = 12
-FONT_SIZE_MEDIUM    = 13
-FONT_SIZE_LARGE     = 15
-FONT_SIZE_TITLE     = 22
-FONT_SIZE_HERO      = 28
+# ── Platform-aware premium typography ─────────────────────────────────
+# We pick the best font that natively ships on each OS so the app renders
+# in a refined, native-feeling typeface (San Francisco on macOS, Segoe UI
+# on Windows). Tk gracefully falls back to the system UI font if a name is
+# unavailable, so these are safe defaults.
+import sys as _sys
+
+if _sys.platform == "darwin":
+    FONT_FAMILY         = "SF Pro Text"
+    FONT_FAMILY_DISPLAY = "SF Pro Display"
+    FONT_FAMILY_MONO    = "SF Mono"
+elif _sys.platform == "win32":
+    FONT_FAMILY         = "Segoe UI"
+    FONT_FAMILY_DISPLAY = "Segoe UI Semibold"
+    FONT_FAMILY_MONO    = "Cascadia Mono"
+else:
+    FONT_FAMILY         = "DejaVu Sans"
+    FONT_FAMILY_DISPLAY = "DejaVu Sans"
+    FONT_FAMILY_MONO    = "DejaVu Sans Mono"
+
+# Refined type scale — tighter, more deliberate hierarchy.
+FONT_SIZE_XXS       = 11
+FONT_SIZE_SMALL     = 12
+FONT_SIZE_NORMAL    = 14
+FONT_SIZE_MEDIUM    = 15
+FONT_SIZE_LARGE     = 19
+FONT_SIZE_TITLE     = 29
+FONT_SIZE_HERO      = 42
+FONT_SIZE_DISPLAY   = 54
 
 
 # ══════════════════════════════════════════════════════════════════════
 # Layout & Spacing
 # ══════════════════════════════════════════════════════════════════════
 
-SIDEBAR_WIDTH       = 260
-BORDER_RADIUS       = 12
-BORDER_RADIUS_SM    = 8
-BORDER_RADIUS_XS    = 4   # Tiny action buttons (copy, bookmark, etc.)
-BORDER_RADIUS_LG    = 16
-BORDER_RADIUS_XL    = 20
+SIDEBAR_WIDTH       = 274
+BORDER_RADIUS       = 14
+BORDER_RADIUS_SM    = 10
+BORDER_RADIUS_XS    = 7
+BORDER_RADIUS_LG    = 18
+BORDER_RADIUS_XL    = 26
 PADDING             = 16
 PADDING_SM          = 8
 PADDING_MD          = 12
@@ -220,25 +248,25 @@ PADDING_XL          = 36
 # Initialize default colors (dark mode)
 # ══════════════════════════════════════════════════════════════════════
 
-COLOR_BG_DARKEST   = "#04040a"
-COLOR_BG            = "#0a0a12"
-COLOR_BG_CARD       = "#111120"
-COLOR_BG_ELEVATED   = "#181830"
-COLOR_BG_HOVER      = "#20203c"
-COLOR_TEXT           = "#eaeaf2"
-COLOR_TEXT_SECONDARY = "#8888a8"
-COLOR_TEXT_DIM      = "#505068"
-COLOR_BORDER        = "#1c1c34"
-COLOR_BORDER_LIGHT  = "#242440"
-COLOR_GOLD_BTN_TEXT = "#0a0a12"
-COLOR_SIDEBAR_BG    = "#0c0c18"
-COLOR_CARD_GLASS    = "#141428"
-COLOR_INPUT_BG      = "#161630"
-COLOR_SHADOW        = "#060610"
-COLOR_SURFACE_1     = "#0f0f1e"
-COLOR_SURFACE_2     = "#14142a"
-COLOR_GLASS_BG      = "#1a1838"
-COLOR_GLASS_BORDER  = "#2a2858"
+COLOR_BG_DARKEST   = "#070709"
+COLOR_BG            = "#0c0c11"
+COLOR_BG_CARD       = "#15151d"
+COLOR_BG_ELEVATED   = "#1c1c26"
+COLOR_BG_HOVER      = "#24242f"
+COLOR_TEXT           = "#f3f2f8"
+COLOR_TEXT_SECONDARY = "#a7a6b8"
+COLOR_TEXT_DIM      = "#6c6b7e"
+COLOR_BORDER        = "#222230"
+COLOR_BORDER_LIGHT  = "#31313f"
+COLOR_GOLD_BTN_TEXT = "#1a1206"
+COLOR_SIDEBAR_BG    = "#08080c"
+COLOR_CARD_GLASS    = "#16161f"
+COLOR_INPUT_BG      = "#101017"
+COLOR_SHADOW        = "#000000"
+COLOR_SURFACE_1     = "#101015"
+COLOR_SURFACE_2     = "#17171f"
+COLOR_GLASS_BG      = "#15151e"
+COLOR_GLASS_BORDER  = "#2a2a38"
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -718,17 +746,19 @@ class GradientDivider(GradientCanvas):
     """
 
     def __init__(self, master, height=1, **kwargs):
-        colors = [
-            "transparent",
-            COLOR_PURPLE_GLOW + "40",
-            COLOR_PURPLE,
-            COLOR_GOLD,
-            COLOR_GOLD + "40",
-            "transparent",
-        ]
-        # Replace transparent with bg color for canvas rendering
+        # Refined hairline: vanishes into the bg at both ends, crests at a
+        # muted amethyst just left of centre, then carries a faint warm
+        # champagne whisper. Low-key and handcrafted — never a bright rainbow.
         bg = COLOR_BG_DARKEST
-        colors = [bg, _dim_hex(COLOR_PURPLE, 0.5), COLOR_PURPLE, COLOR_GOLD, _dim_hex(COLOR_GOLD, 0.5), bg]
+        colors = [
+            bg,
+            _blend_colors(bg, COLOR_PURPLE, 0.16),
+            _blend_colors(bg, COLOR_PURPLE, 0.42),
+            _blend_colors(bg, COLOR_PURPLE_LIGHT, 0.30),
+            _blend_colors(bg, COLOR_GOLD, 0.24),
+            _blend_colors(bg, COLOR_GOLD, 0.10),
+            bg,
+        ]
         super().__init__(
             master,
             colors=colors,
@@ -797,14 +827,14 @@ class AnimatedGradientBG(tk.Canvas):
 
     def _draw_bg_canvas(self, w: int, h: int):
         """Original canvas oval method (fallback when PIL is unavailable)."""
-        # Layer 1: Large top-center purple glow (like website's 80% 50% at 50% -20%)
-        cx1, cy1 = w // 2, -h // 5
-        r1 = int(w * 0.5)
+        # Layer 1: Deep top-left violet nebula glow
+        cx1, cy1 = int(w * 0.25), -h // 8
+        r1 = int(w * 0.55)
         steps = min(r1, 60)
         for i in range(steps, 0, -1):
             t = i / steps
-            alpha = (1 - t) * 0.5
-            intensity = 0.15 + 0.15 * math.sin(self._phase + t * 2)
+            alpha = (1 - t) * 0.45
+            intensity = 0.18 + 0.12 * math.sin(self._phase + t * 2)
             color = _blend_colors(COLOR_BG_DARKEST, COLOR_PURPLE_DEEP, intensity * alpha)
             ri = int(r1 * t)
             try:
@@ -812,14 +842,14 @@ class AnimatedGradientBG(tk.Canvas):
             except tk.TclError:
                 break
 
-        # Layer 2: Right-side gold glow (like website's 60% 40% at 80% 50%)
-        cx2, cy2 = int(w * 0.8), h // 2
-        r2 = int(w * 0.35)
-        steps2 = min(r2, 40)
+        # Layer 2: Warm amber glow — lower-right, subtle warmth accent
+        cx2, cy2 = int(w * 0.85), int(h * 0.65)
+        r2 = int(w * 0.30)
+        steps2 = min(r2, 35)
         for i in range(steps2, 0, -1):
             t = i / steps2
-            alpha = (1 - t) * 0.15
-            intensity = 0.1 + 0.08 * math.sin(self._phase * 0.7 + t * 3)
+            alpha = (1 - t) * 0.12
+            intensity = 0.08 + 0.06 * math.sin(self._phase * 0.7 + t * 3)
             color = _blend_colors(COLOR_BG_DARKEST, COLOR_GOLD_DIM, intensity * alpha)
             ri = int(r2 * t)
             try:
@@ -827,14 +857,14 @@ class AnimatedGradientBG(tk.Canvas):
             except tk.TclError:
                 break
 
-        # Layer 3: Bottom-left purple glow (like website's 60% 40% at 20% 80%)
-        cx3, cy3 = int(w * 0.2), int(h * 0.8)
-        r3 = int(w * 0.3)
-        steps3 = min(r3, 35)
+        # Layer 3: Violet haze — bottom-center, very diffuse
+        cx3, cy3 = int(w * 0.5), int(h * 0.85)
+        r3 = int(w * 0.4)
+        steps3 = min(r3, 30)
         for i in range(steps3, 0, -1):
             t = i / steps3
-            alpha = (1 - t) * 0.2
-            intensity = 0.1 + 0.08 * math.sin(self._phase * 1.3 + t * 2.5)
+            alpha = (1 - t) * 0.15
+            intensity = 0.08 + 0.06 * math.sin(self._phase * 1.3 + t * 2.5)
             color = _blend_colors(COLOR_BG_DARKEST, COLOR_PURPLE_DEEP, intensity * alpha)
             ri = int(r3 * t)
             try:
@@ -854,40 +884,40 @@ class AnimatedGradientBG(tk.Canvas):
         img = _PILImage.new("RGB", (w, h), bg_rgb)
         draw = _PILImageDraw.Draw(img)
 
-        # Layer 1: Large top-center purple glow
-        cx1, cy1 = w // 2, -h // 5
-        r1 = int(w * 0.5)
+        # Layer 1: Deep top-left violet nebula glow
+        cx1, cy1 = int(w * 0.25), -h // 8
+        r1 = int(w * 0.55)
         steps = min(r1, 60)
         for i in range(steps, 0, -1):
             t = i / steps
-            alpha = (1 - t) * 0.5
-            intensity = 0.15 + 0.15 * math.sin(self._phase + t * 2)
+            alpha = (1 - t) * 0.45
+            intensity = 0.18 + 0.12 * math.sin(self._phase + t * 2)
             blend_t = intensity * alpha
             color = _blend_rgb(bg_rgb, purple_deep_rgb, blend_t)
             ri = int(r1 * t)
             draw.ellipse([cx1 - ri, cy1 - ri, cx1 + ri, cy1 + ri], fill=color)
 
-        # Layer 2: Right-side gold glow
-        cx2, cy2 = int(w * 0.8), h // 2
-        r2 = int(w * 0.35)
-        steps2 = min(r2, 40)
+        # Layer 2: Warm amber glow — lower-right, subtle warmth accent
+        cx2, cy2 = int(w * 0.85), int(h * 0.65)
+        r2 = int(w * 0.30)
+        steps2 = min(r2, 35)
         for i in range(steps2, 0, -1):
             t = i / steps2
-            alpha = (1 - t) * 0.15
-            intensity = 0.1 + 0.08 * math.sin(self._phase * 0.7 + t * 3)
+            alpha = (1 - t) * 0.12
+            intensity = 0.08 + 0.06 * math.sin(self._phase * 0.7 + t * 3)
             blend_t = intensity * alpha
             color = _blend_rgb(bg_rgb, gold_dim_rgb, blend_t)
             ri = int(r2 * t)
             draw.ellipse([cx2 - ri, cy2 - ri, cx2 + ri, cy2 + ri], fill=color)
 
-        # Layer 3: Bottom-left purple glow
-        cx3, cy3 = int(w * 0.2), int(h * 0.8)
-        r3 = int(w * 0.3)
-        steps3 = min(r3, 35)
+        # Layer 3: Violet haze — bottom-center, very diffuse
+        cx3, cy3 = int(w * 0.5), int(h * 0.85)
+        r3 = int(w * 0.4)
+        steps3 = min(r3, 30)
         for i in range(steps3, 0, -1):
             t = i / steps3
-            alpha = (1 - t) * 0.2
-            intensity = 0.1 + 0.08 * math.sin(self._phase * 1.3 + t * 2.5)
+            alpha = (1 - t) * 0.15
+            intensity = 0.08 + 0.06 * math.sin(self._phase * 1.3 + t * 2.5)
             blend_t = intensity * alpha
             color = _blend_rgb(bg_rgb, purple_deep_rgb, blend_t)
             ri = int(r3 * t)
@@ -935,33 +965,39 @@ class GlassCard(ctk.CTkFrame):
         self._glow_color = glow_color or COLOR_PURPLE
         corner_radius = kwargs.pop("corner_radius", BORDER_RADIUS_LG)
 
-        # Outer glow frame — blend glow with background so the
-        # outline is essentially invisible (95% bg + 5% glow color).
+        # Outer halo frame — a soft, barely-there colored glow that reads as
+        # gentle elevation. Kept very low-saturation for a calm, premium feel.
         self._glow_frame = ctk.CTkFrame(
             master,
-            fg_color=_blend_colors(COLOR_BG, self._glow_color, 0.05),
-            corner_radius=corner_radius + 1,
+            fg_color=_blend_colors(COLOR_BG, self._glow_color, 0.10),
+            corner_radius=corner_radius + 3,
         )
 
-        # Main card with glass-like background
+        # Main card with glass-like background — slightly lighter than bg
         super().__init__(
             self._glow_frame,
             fg_color=COLOR_GLASS_BG,
             corner_radius=corner_radius,
             border_width=1,
-            border_color=COLOR_GLASS_BORDER,
+            border_color=_blend_colors(COLOR_GLASS_BORDER, self._glow_color, 0.20),
             **kwargs,
         )
         # Use super().pack() to pack THIS frame inside _glow_frame.
         # Do NOT use self.pack() here because the overridden pack()
         # redirects to _glow_frame.pack() which would be wrong at init time.
-        super().pack(fill="both", expand=True, padx=1, pady=1)
+        super().pack(fill="both", expand=True, padx=3, pady=3)
 
-        # Top gradient accent (subtle)
+        # Top accent — a centred jewel highlight that melts into the glass on
+        # both sides (a soft amethyst→champagne kiss rather than a hard line).
         try:
             self._accent_canvas = GradientCanvas(
                 self,
-                colors=[_dim_hex(self._glow_color, 0.6), _dim_hex(COLOR_GOLD, 0.4)],
+                colors=[
+                    COLOR_GLASS_BG,
+                    _blend_colors(COLOR_GLASS_BG, self._glow_color, 0.75),
+                    _blend_colors(COLOR_GLASS_BG, COLOR_GOLD, 0.45),
+                    COLOR_GLASS_BG,
+                ],
                 height=2,
                 orientation="horizontal",
             )
@@ -1239,12 +1275,12 @@ class HeroBackground(tk.Canvas):
 
 def create_badge(parent, text, color=COLOR_GOLD, bg_color=None, **kwargs):
     """
-    Create a pill-shaped badge matching the website's badge style.
-    Website badges: 'px-3 py-1 rounded-full bg-iso-purple/10 border border-iso-purple/20'
+    Create a pill-shaped badge matching the premium badge style.
+    Very subtle: nearly transparent fill, thin colored border, small dot.
     """
     if bg_color is None:
-        bg_color = _dim_hex(color, 0.12)
-    border_color = _dim_hex(color, 0.3)
+        bg_color = _blend_colors(COLOR_BG_ELEVATED, color, 0.08)
+    border_color = _blend_colors(COLOR_BORDER, color, 0.4)
 
     badge = ctk.CTkFrame(
         parent,
@@ -1252,22 +1288,22 @@ def create_badge(parent, text, color=COLOR_GOLD, bg_color=None, **kwargs):
         corner_radius=20,
         border_width=1,
         border_color=border_color,
-        height=24,
+        height=22,
         **kwargs,
     )
     badge.pack_propagate(False)
 
-    # Small dot indicator (like website's `w-1.5 h-1.5 rounded-full bg-iso-purple`)
-    dot = ctk.CTkFrame(badge, width=6, height=6, fg_color=color, corner_radius=3)
-    dot.pack(side="left", padx=(8, 4), pady=(9, 9))
+    # Small dot indicator
+    dot = ctk.CTkFrame(badge, width=5, height=5, fg_color=color, corner_radius=3)
+    dot.pack(side="left", padx=(7, 3), pady=(8, 8))
     dot.pack_propagate(False)
 
     ctk.CTkLabel(
         badge,
         text=text,
-        font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+        font=(FONT_FAMILY, FONT_SIZE_XXS),
         text_color=color,
-    ).pack(side="left", padx=(0, 8))
+    ).pack(side="left", padx=(0, 7))
 
     return badge
 
@@ -1278,21 +1314,23 @@ def create_badge(parent, text, color=COLOR_GOLD, bg_color=None, **kwargs):
 
 def create_tag_chip(parent, text):
     """
-    Create a small tag chip matching the website's feature tag style.
-    Website tags: 'px-2 py-0.5 text-[10px] font-medium rounded-md bg-secondary text-muted-foreground'
+    Create a small tag chip — refined monospaced style for stats/metadata.
+    Slightly elevated bg, subtle border, dim text.
     """
     chip = ctk.CTkFrame(
         parent,
         fg_color=COLOR_BG_ELEVATED,
-        corner_radius=4,
-        height=20,
+        corner_radius=5,
+        border_width=1,
+        border_color=COLOR_BORDER,
+        height=22,
     )
     chip.pack_propagate(False)
 
     ctk.CTkLabel(
         chip,
         text=f" {text} ",
-        font=(FONT_FAMILY, FONT_SIZE_XXS),
+        font=(FONT_FAMILY_MONO, FONT_SIZE_XXS),
         text_color=COLOR_TEXT_DIM,
     ).pack(padx=2, pady=1)
 
@@ -1376,15 +1414,16 @@ def create_page_header(parent, title, subtitle=None):
     header = ctk.CTkFrame(parent, fg_color="transparent")
     header.pack(fill="x", pady=(0, PADDING_LG))
 
+    # Slim accent bar that stretches to the title's height (amethyst).
     accent = ctk.CTkFrame(
-        header, width=4, corner_radius=2, fg_color=COLOR_PURPLE,
+        header, width=3, corner_radius=3, fg_color=COLOR_PURPLE,
     )
-    accent.pack(side="left", padx=(0, PADDING))
+    accent.pack(side="left", fill="y", padx=(0, PADDING_MD))
     accent.pack_propagate(False)
 
     ctk.CTkLabel(
         header, text=title,
-        font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
+        font=(FONT_FAMILY_DISPLAY, FONT_SIZE_TITLE, "bold"),
         text_color=COLOR_TEXT, anchor="w",
     ).pack(side="left", fill="x", expand=True)
 
@@ -1444,19 +1483,33 @@ def create_stat_card(parent, icon, label, default_value, color, card_width=None)
 
 def create_animated_stat_card(parent, icon, label, default_value, color, card_width=None):
     """
-    Create a premium stat card with animated shimmer bar, matching
-    the website's glass-card hover effects.
+    Create a premium stat card with a thin gradient accent bar.
+    The card uses a very subtle glow border matching the accent color.
     Returns (card, value_label, shimmer_bar) tuple.
     """
-    card = ctk.CTkFrame(
-        parent, fg_color=COLOR_BG_CARD,
-        corner_radius=BORDER_RADIUS_LG,
-        border_width=1, border_color=COLOR_BORDER_LIGHT,
+    # Outer glow wrapper (very subtle colored halo)
+    glow_wrapper = ctk.CTkFrame(
+        parent,
+        fg_color=_blend_colors(COLOR_BG, color, 0.06),
+        corner_radius=BORDER_RADIUS_LG + 2,
     )
 
-    # Static gradient bar at top (saves 1 animation timer per card;
-    # dashboard had 5 ShimmerBars — now just 1 on the page header)
-    shimmer = GradientCanvas(card, colors=GRADIENT_PURPLE_GOLD, height=3, orientation="horizontal")
+    card = ctk.CTkFrame(
+        glow_wrapper,
+        fg_color=COLOR_BG_CARD,
+        corner_radius=BORDER_RADIUS_LG,
+        border_width=1,
+        border_color=_blend_colors(COLOR_BORDER, color, 0.3),
+    )
+    card.pack(fill="both", expand=True, padx=2, pady=2)
+
+    # Thin accent line at top — color to dim
+    shimmer = GradientCanvas(
+        card,
+        colors=[color, _dim_hex(color, 0.4), COLOR_BG_CARD],
+        height=2,
+        orientation="horizontal",
+    )
     shimmer.pack(fill="x")
 
     # Content
@@ -1466,23 +1519,34 @@ def create_animated_stat_card(parent, icon, label, default_value, color, card_wi
     top = ctk.CTkFrame(inner, fg_color="transparent")
     top.pack(fill="x")
 
+    # Icon in a small colored pill
+    icon_frame = ctk.CTkFrame(
+        top,
+        fg_color=_blend_colors(COLOR_BG_ELEVATED, color, 0.15),
+        corner_radius=6,
+        width=28,
+        height=22,
+    )
+    icon_frame.pack(side="left", padx=(0, PADDING_SM))
+    icon_frame.pack_propagate(False)
     ctk.CTkLabel(
-        top, text=icon, font=(FONT_FAMILY, 14),
-        text_color=COLOR_TEXT_DIM, anchor="w",
-    ).pack(side="left", padx=(0, 6))
+        icon_frame, text=icon, font=(FONT_FAMILY, 11),
+        text_color=color,
+    ).place(relx=0.5, rely=0.5, anchor="center")
 
     ctk.CTkLabel(
-        top, text=label, font=(FONT_FAMILY, FONT_SIZE_SMALL),
+        top, text=label.upper(), font=(FONT_FAMILY, FONT_SIZE_XXS),
         text_color=COLOR_TEXT_DIM, anchor="w",
     ).pack(side="left")
 
     value_label = ctk.CTkLabel(
-        inner, text=default_value, font=(FONT_FAMILY, 32, "bold"),
+        inner, text=default_value, font=(FONT_FAMILY, 30, "bold"),
         text_color=color, anchor="w",
     )
-    value_label.pack(fill="x", pady=(4, 0))
+    value_label.pack(fill="x", pady=(6, 0))
 
-    return card, value_label, shimmer
+    # Return glow_wrapper as "card" so callers can pack it
+    return glow_wrapper, value_label, shimmer
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -1516,7 +1580,7 @@ def _build_ctk_theme() -> dict:
             "corner_radius": BORDER_RADIUS_SM,
             "border_width": 1,
             "fg_color": [COLOR_INPUT_BG, COLOR_INPUT_BG],
-            "border_color": [COLOR_BORDER, COLOR_BORDER],
+            "border_color": [COLOR_BORDER_LIGHT, COLOR_BORDER_LIGHT],
             "text_color": [COLOR_TEXT, COLOR_TEXT],
             "placeholder_text_color": [COLOR_TEXT_DIM, COLOR_TEXT_DIM],
             "font": (FONT_FAMILY, FONT_SIZE_NORMAL),
@@ -1527,13 +1591,13 @@ def _build_ctk_theme() -> dict:
             "fg_color": [COLOR_PURPLE, COLOR_PURPLE],
             "hover_color": [COLOR_PURPLE_DARK, COLOR_PURPLE_DARK],
             "text_color": [COLOR_TEXT, COLOR_TEXT],
-            "font": (FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
+            "font": (FONT_FAMILY, FONT_SIZE_NORMAL),
         },
         "CTkTextbox": {
             "corner_radius": BORDER_RADIUS_SM,
             "border_width": 1,
             "fg_color": [COLOR_INPUT_BG, COLOR_INPUT_BG],
-            "border_color": [COLOR_BORDER, COLOR_BORDER],
+            "border_color": [COLOR_BORDER_LIGHT, COLOR_BORDER_LIGHT],
             "text_color": [COLOR_TEXT, COLOR_TEXT],
             "font": (FONT_FAMILY_MONO, FONT_SIZE_NORMAL),
         },
@@ -1557,3 +1621,122 @@ def _build_ctk_theme() -> dict:
 
 
 CTK_THEME = _build_ctk_theme()
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Live CTk Theme Application
+# ══════════════════════════════════════════════════════════════════════
+
+def apply_ctk_theme() -> None:
+    """Recolor CustomTkinter's *active* theme in place.
+
+    The app loads CTk's stock ``blue`` theme, which means any widget that
+    doesn't set explicit colors (switches, sliders, progress bars, check
+    boxes, dropdowns, segmented buttons, scrollbars …) would render with a
+    generic blue accent. This rewrites those defaults to the IsoCortex
+    palette so the whole UI is cohesive.
+
+    Only keys that already exist in the loaded theme are overwritten, so it
+    is safe across CustomTkinter versions. Must be called *after*
+    ``ctk.set_default_color_theme(...)`` and *before* widgets are built.
+    """
+    if ctk is None:
+        return
+    try:
+        theme = ctk.ThemeManager.theme
+    except Exception:
+        return
+
+    def _set(widget: str, key: str, value) -> None:
+        try:
+            if widget in theme and key in theme[widget]:
+                theme[widget][key] = value
+        except Exception:
+            pass
+
+    purple   = [COLOR_PURPLE, COLOR_PURPLE]
+    purple_d = [COLOR_PURPLE_DARK, COLOR_PURPLE_DARK]
+    purple_l = [COLOR_PURPLE_LIGHT, COLOR_PURPLE_LIGHT]
+    text     = [COLOR_TEXT, COLOR_TEXT]
+    text_dim = [COLOR_TEXT_DIM, COLOR_TEXT_DIM]
+    bg       = [COLOR_BG, COLOR_BG]
+    card     = [COLOR_BG_CARD, COLOR_BG_CARD]
+    elevated = [COLOR_BG_ELEVATED, COLOR_BG_ELEVATED]
+    hover    = [COLOR_BG_HOVER, COLOR_BG_HOVER]
+    inp      = [COLOR_INPUT_BG, COLOR_INPUT_BG]
+    border   = [COLOR_BORDER_LIGHT, COLOR_BORDER_LIGHT]
+
+    # Window / frames
+    _set("CTk", "fg_color", bg)
+    _set("CTkToplevel", "fg_color", bg)
+    _set("CTkFrame", "fg_color", card)
+    _set("CTkFrame", "top_fg_color", card)
+    _set("CTkFrame", "border_color", border)
+    _set("CTkFrame", "corner_radius", BORDER_RADIUS)
+
+    # Buttons
+    _set("CTkButton", "fg_color", purple)
+    _set("CTkButton", "hover_color", purple_d)
+    _set("CTkButton", "text_color", text)
+    _set("CTkButton", "text_color_disabled", text_dim)
+    _set("CTkButton", "border_color", border)
+    _set("CTkButton", "corner_radius", BORDER_RADIUS_SM)
+
+    # Text inputs
+    for w in ("CTkEntry", "CTkTextbox"):
+        _set(w, "fg_color", inp)
+        _set(w, "border_color", border)
+        _set(w, "text_color", text)
+        _set(w, "placeholder_text_color", text_dim)
+        _set(w, "corner_radius", BORDER_RADIUS_SM)
+    _set("CTkTextbox", "scrollbar_button_color", elevated)
+    _set("CTkTextbox", "scrollbar_button_hover_color", hover)
+
+    # Labels
+    _set("CTkLabel", "text_color", text)
+
+    # Selection controls
+    for w in ("CTkCheckBox", "CTkRadioButton"):
+        _set(w, "fg_color", purple)
+        _set(w, "hover_color", purple_d)
+        _set(w, "text_color", text)
+        _set(w, "checkmark_color", text)
+        _set(w, "border_color", border)
+    _set("CTkSwitch", "progress_color", purple)
+    _set("CTkSwitch", "button_color", text)
+    _set("CTkSwitch", "button_hover_color", purple_l)
+    _set("CTkSwitch", "fg_color", elevated)
+    _set("CTkSwitch", "text_color", text)
+
+    # Sliders / progress
+    _set("CTkSlider", "button_color", purple)
+    _set("CTkSlider", "button_hover_color", purple_l)
+    _set("CTkSlider", "progress_color", purple)
+    _set("CTkSlider", "fg_color", elevated)
+    _set("CTkProgressBar", "progress_color", purple)
+    _set("CTkProgressBar", "fg_color", elevated)
+
+    # Dropdowns
+    for w in ("CTkOptionMenu", "CTkComboBox"):
+        _set(w, "fg_color", inp)
+        _set(w, "button_color", purple)
+        _set(w, "button_hover_color", purple_d)
+        _set(w, "text_color", text)
+        _set(w, "border_color", border)
+    _set("DropdownMenu", "fg_color", card)
+    _set("DropdownMenu", "hover_color", hover)
+    _set("DropdownMenu", "text_color", text)
+
+    # Segmented button
+    _set("CTkSegmentedButton", "fg_color", inp)
+    _set("CTkSegmentedButton", "selected_color", purple)
+    _set("CTkSegmentedButton", "selected_hover_color", purple_d)
+    _set("CTkSegmentedButton", "unselected_color", inp)
+    _set("CTkSegmentedButton", "unselected_hover_color", hover)
+    _set("CTkSegmentedButton", "text_color", text_dim)
+    _set("CTkSegmentedButton", "selected_text_color", text)
+
+    # Scrollbars
+    _set("CTkScrollbar", "button_color", elevated)
+    _set("CTkScrollbar", "button_hover_color", hover)
+    _set("CTkScrollableFrame", "label_fg_color", card)

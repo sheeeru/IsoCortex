@@ -105,6 +105,13 @@ class _DebouncedHandler(FileSystemEventHandler):
         if _should_ignore(path) or not _is_supported(path):
             return
 
+        # Check engine exclusion patterns
+        try:
+            if self._engine.is_excluded(path):
+                return
+        except Exception:
+            pass
+
         # Determine which index this path belongs to by matching the
         # file path against the watched folder prefixes.
         index_name = "default"

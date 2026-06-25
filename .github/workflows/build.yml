@@ -6,7 +6,14 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+env:
+  APP_NAME: "IsoCortex"
+  PYTHON_VERSION: "3.12"
+
 jobs:
+  # ──────────────────────────────────────────────────────────────────
+  #  Windows Build
+  # ──────────────────────────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
     steps:
@@ -14,15 +21,26 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Determine version string
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=dev-$(echo ${GITHUB_SHA::7})" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
-          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet requests huggingface_hub
+          pip install llama-cpp-python
 
       - name: Build Windows .exe
+        shell: pwsh
         run: |
           pyinstaller -y `
             --name "IsoCortex" `
@@ -37,10 +55,6 @@ jobs:
             --hidden-import=desktop_app.engine `
             --hidden-import=desktop_app.llm `
             --hidden-import=desktop_app.workers `
-            --hidden-import=desktop_app.ocr `
-            --hidden-import=desktop_app.code_parser `
-            --hidden-import=desktop_app.plugins `
-            --hidden-import=desktop_app.watcher `
             --hidden-import=desktop_app.screens `
             --hidden-import=desktop_app.screens.search `
             --hidden-import=desktop_app.screens.upload `
@@ -51,25 +65,29 @@ jobs:
             --hidden-import=desktop_app.components `
             --hidden-import=desktop_app.components.sidebar `
             --hidden-import=desktop_app.components.toast `
-            --hidden-import=desktop_app.components.exporter `
-            --hidden-import=desktop_app.components.preview `
+            --hidden-import=sqlite3 `
             --collect-all customtkinter `
             --collect-all onnxruntime `
+            --collect-all pymupdf `
             --collect-all llama_cpp `
             --collect-data tokenizers `
-            --hidden-import=llama_cpp `
             --paths . `
             desktop_app/main.py
 
       - name: Zip Windows build
-        run: Compress-Archive -Path dist/IsoCortex.exe -DestinationPath IsoCortex-Windows-v2.0.0.zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/IsoCortex.exe -DestinationPath "IsoCortex-Windows-${{ steps.version.outputs.VERSION }}.zip"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IsoCortex-Windows-v2.0.0
-          path: IsoCortex-Windows-v2.0.0.zip
+          name: IsoCortex-Windows-${{ steps.version.outputs.VERSION }}
+          path: IsoCortex-Windows-${{ steps.version.outputs.VERSION }}.zip
 
+  # ──────────────────────────────────────────────────────────────────
+  #  macOS Build
+  # ──────────────────────────────────────────────────────────────────
   build-macos:
     runs-on: macos-latest
     steps:
@@ -77,13 +95,38 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Determine version string
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=dev-$(echo ${GITHUB_SHA::7})" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create .icns icon from PNG
+        run: |
+          mkdir -p icon.iconset
+          sips -z 16 16     desktop_app/assets/app_icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     desktop_app/assets/app_icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     desktop_app/assets/app_icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     desktop_app/assets/app_icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   desktop_app/assets/app_icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   desktop_app/assets/app_icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   desktop_app/assets/app_icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   desktop_app/assets/app_icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   desktop_app/assets/app_icon.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 desktop_app/assets/app_icon.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o desktop_app/assets/app_icon.icns
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install pyinstaller customtkinter Pillow numpy onnxruntime tokenizers bcrypt pymupdf python-docx python-pptx openpyxl
-          pip install llama-cpp-python hnswlib watchdog pdfplumber pytesseract chardet requests huggingface_hub
+          CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python --no-cache-dir
 
       - name: Build macOS .app
         run: |
@@ -91,7 +134,7 @@ jobs:
             --name "IsoCortex" \
             --windowed \
             --onedir \
-            --icon "desktop_app/assets/app_icon.png" \
+            --icon "desktop_app/assets/app_icon.icns" \
             --add-data "desktop_app/assets:desktop_app/assets" \
             --hidden-import=desktop_app \
             --hidden-import=desktop_app.main \
@@ -100,10 +143,6 @@ jobs:
             --hidden-import=desktop_app.engine \
             --hidden-import=desktop_app.llm \
             --hidden-import=desktop_app.workers \
-            --hidden-import=desktop_app.ocr \
-            --hidden-import=desktop_app.code_parser \
-            --hidden-import=desktop_app.plugins \
-            --hidden-import=desktop_app.watcher \
             --hidden-import=desktop_app.screens \
             --hidden-import=desktop_app.screens.search \
             --hidden-import=desktop_app.screens.upload \
@@ -114,22 +153,21 @@ jobs:
             --hidden-import=desktop_app.components \
             --hidden-import=desktop_app.components.sidebar \
             --hidden-import=desktop_app.components.toast \
-            --hidden-import=desktop_app.components.exporter \
-            --hidden-import=desktop_app.components.preview \
             --hidden-import=_posixsubprocess \
+            --hidden-import=sqlite3 \
             --collect-all customtkinter \
             --collect-all onnxruntime \
+            --collect-all pymupdf \
             --collect-all llama_cpp \
             --collect-data tokenizers \
-            --hidden-import=llama_cpp \
             --paths . \
             desktop_app/main.py
 
       - name: Zip macOS build
-        run: cd dist && zip -r ../IsoCortex-macOS-v2.0.0.zip IsoCortex.app/
+        run: cd dist && zip -r "../IsoCortex-macOS-${{ steps.version.outputs.VERSION }}.zip" IsoCortex.app/
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IsoCortex-macOS-v2.0.0
-          path: IsoCortex-macOS-v2.0.0.zip
+          name: IsoCortex-macOS-${{ steps.version.outputs.VERSION }}
+          path: IsoCortex-macOS-${{ steps.version.outputs.VERSION }}.zip

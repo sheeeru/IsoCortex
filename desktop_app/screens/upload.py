@@ -28,9 +28,9 @@ from desktop_app.theme import (
     COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_GOLD_BTN_TEXT,
     COLOR_TEXT, COLOR_TEXT_SECONDARY, COLOR_TEXT_DIM,
     COLOR_BORDER, COLOR_BORDER_LIGHT,
-    COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
+    COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR, COLOR_INFO,
     COLOR_SHADOW,
-    FONT_FAMILY, FONT_FAMILY_MONO,
+    FONT_FAMILY, FONT_FAMILY_DISPLAY, FONT_FAMILY_MONO,
     FONT_SIZE_TITLE, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_XS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
@@ -45,12 +45,12 @@ from desktop_app.workers import IngestionWorker, WorkerThread
 # ── Extension -> colour mapping for file-row left borders & badges ─────
 _EXT_COLORS: dict[str, str] = {
     ".pdf":  COLOR_ERROR,       # red
-    ".docx": "#3b82f6",         # blue
-    ".doc":  "#3b82f6",
+    ".docx": COLOR_INFO,         # blue
+    ".doc":  COLOR_INFO,
     ".xlsx": COLOR_SUCCESS,     # green
     ".xls":  COLOR_SUCCESS,
     ".csv":  COLOR_SUCCESS,
-    ".py":   "#3b82f6",
+    ".py":   COLOR_INFO,
     ".md":   COLOR_PURPLE_LIGHT,
     ".pptx": COLOR_WARNING,
     ".json": COLOR_GOLD,
@@ -104,6 +104,7 @@ class UploadScreen(ctk.CTkFrame):
         self._build_header(master)
         self._build_files_card(master)
         self._build_status_bar(master)
+        self._build_indexed_folders(master)
         self._setup_drag_and_drop()
 
     # ── Header ───────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ class UploadScreen(ctk.CTkFrame):
 
         ctk.CTkLabel(
             title_col, text="Upload Files",
-            font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
+            font=(FONT_FAMILY_DISPLAY, FONT_SIZE_TITLE, "bold"),
             text_color=COLOR_TEXT, anchor="w",
         ).pack(anchor="w")
 
@@ -308,6 +309,253 @@ class UploadScreen(ctk.CTkFrame):
             command=self._start_indexing,
         )
         self._ingest_btn.pack(side="right")
+
+    # ══════════════════════════════════════════════════════════════════
+    #  INDEXED FOLDERS
+    # ══════════════════════════════════════════════════════════════════
+
+    def _build_indexed_folders(self, parent: ctk.CTkFrame) -> None:
+        """Show watched folders with doc counts and Re-index buttons."""
+        # GradientDivider
+        GradientDivider(parent, height=1).pack(fill="x", pady=(PADDING_LG, PADDING_MD))
+
+        folders_wrapper = FadeInFrame(
+            parent, fg_color="transparent",
+            delay=ANIM_DELAY_600,
+            corner_radius=0,
+        )
+        folders_wrapper.pack(fill="x")
+
+        header_row = ctk.CTkFrame(folders_wrapper, fg_color="transparent")
+        header_row.pack(fill="x", pady=(0, PADDING_SM))
+
+        ctk.CTkLabel(
+            header_row, text="Indexed Folders",
+            font=(FONT_FAMILY, FONT_SIZE_MEDIUM),
+            text_color=COLOR_TEXT, anchor="w",
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            header_row,
+            text="Watched folders with their indexed document counts",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+        ).pack(side="left", padx=(PADDING_SM, 0))
+
+        self._folder_list_frame = ctk.CTkFrame(
+            folders_wrapper, fg_color="transparent",
+        )
+        self._folder_list_frame.pack(fill="x", pady=(0, PADDING))
+
+        self._reindex_progress_label = ctk.CTkLabel(
+            folders_wrapper,
+            text="",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+        )
+        self._reindex_progress_label.pack(fill="x")
+
+        self._reindex_progress_bar = ctk.CTkProgressBar(
+            folders_wrapper, height=4,
+            fg_color=COLOR_BG_ELEVATED,
+            progress_color=COLOR_GOLD,
+            corner_radius=2,
+        )
+        self._reindex_progress_bar.pack(fill="x")
+        self._reindex_progress_bar.set(0)
+
+        # Populate after a short delay so the screen renders first
+        self.after(200, self._refresh_indexed_folders)
+
+    def _refresh_indexed_folders(self) -> None:
+        """Populate the indexed folders list."""
+        for w in self._folder_list_frame.winfo_children():
+            w.destroy()
+
+        # Get watched folders
+        watcher = None
+        try:
+            watcher = self._app._watcher
+        except AttributeError:
+            pass
+
+        folders = []
+        if watcher:
+            folders = watcher.get_watched_folders()
+
+        if not folders:
+            ctk.CTkLabel(
+                self._folder_list_frame,
+                text="No watched folders configured — add one in Settings",
+                font=(FONT_FAMILY, FONT_SIZE_SMALL),
+                text_color=COLOR_TEXT_DIM,
+            ).pack(pady=(PADDING_SM, 0))
+            return
+
+        for info in folders:
+            folder_path = info["folder_path"]
+            index_name = info["index_name"]
+            self._build_folder_row(folder_path, index_name)
+
+    def _get_folder_doc_count(self, folder_path: str) -> int:
+        """Count documents in the DB for a given folder path."""
+        try:
+            conn = self._app.engine._get_db()
+            row = conn.execute(
+                "SELECT COUNT(*) FROM documents WHERE file_path LIKE ?",
+                (folder_path + "%",),
+            ).fetchone()
+            if row:
+                return row[0]
+        except Exception:
+            pass
+        return 0
+
+    def _truncate_path(self, path: str, max_len: int = 50) -> str:
+        """Truncate a path for display, keeping the end visible."""
+        if len(path) <= max_len:
+            return path
+        return "\u2026" + path[-(max_len - 1):]
+
+    def _build_folder_row(self, folder_path: str, index_name: str) -> None:
+        """Build a single folder row with path, doc count, and Re-index button."""
+        doc_count = self._get_folder_doc_count(folder_path)
+        display_path = self._truncate_path(folder_path)
+
+        row = ctk.CTkFrame(
+            self._folder_list_frame,
+            fg_color=COLOR_BG_ELEVATED,
+            corner_radius=BORDER_RADIUS_SM,
+            height=44,
+        )
+        row.pack(fill="x", pady=2)
+        row.pack_propagate(False)
+
+        # Folder icon + path
+        ctk.CTkLabel(
+            row, text="\U0001F4C1",
+            font=(FONT_FAMILY, FONT_SIZE_NORMAL),
+        ).pack(side="left", padx=(PADDING_MD, PADDING_SM))
+
+        ctk.CTkLabel(
+            row, text=display_path,
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_TEXT, anchor="w",
+        ).pack(side="left", fill="x", expand=True)
+
+        # Doc count badge
+        create_badge(
+            row, text=f"{doc_count} docs", color=COLOR_PURPLE_LIGHT,
+        ).pack(side="left", padx=(PADDING_SM, PADDING_SM))
+
+        # Remove Watch button (Python 3.14 safe: assign btn before lambda)
+        remove_btn = ctk.CTkButton(
+            row, text="Remove Watch",
+            font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+            fg_color=COLOR_BG_DARKEST,
+            hover_color=COLOR_ERROR,
+            text_color=COLOR_ERROR,
+            height=26, width=90,
+            corner_radius=BORDER_RADIUS_SM,
+        )
+        remove_btn.pack(side="right", padx=(0, PADDING_SM))
+        captured_fp = folder_path
+        captured_row = row
+        captured_remove_btn = remove_btn
+        remove_btn.configure(command=lambda: self._remove_watched_folder(captured_fp, captured_row, captured_remove_btn))
+
+        # Re-index button
+        btn = ctk.CTkButton(
+            row, text="Re-index",
+            font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+            fg_color=COLOR_PURPLE_DARK,
+            hover_color=COLOR_PURPLE,
+            text_color=COLOR_TEXT,
+            height=26, width=70,
+            corner_radius=BORDER_RADIUS_SM,
+            command=lambda fp=folder_path, idx=index_name, b=btn: self._start_folder_reindex(fp, idx, b),
+        )
+        btn.pack(side="right", padx=(0, PADDING_SM))
+
+    def _remove_watched_folder(self, folder_path: str, row, btn) -> None:
+        """Remove a folder from the file watcher and update the UI."""
+        try:
+            watcher = self._app._watcher
+            if not watcher:
+                self._app.show_toast("No file watcher running", "error")
+                return
+            watcher.remove_watch(folder_path)
+            row.destroy()
+            self._app.show_toast(f"Stopped watching: {self._truncate_path(folder_path, 35)}", "success")
+        except Exception as exc:
+            captured_exc = exc
+            try:
+                btn.configure(state="normal")
+            except Exception:
+                pass
+            self._app.show_toast(f"Failed to remove watch: {captured_exc}", "error")
+
+    def _start_folder_reindex(self, folder_path: str, index_name: str, btn) -> None:
+        """Kick off a folder re-index in a background thread."""
+        btn.configure(state="disabled", text="Re-indexing\u2026")
+        self._reindex_progress_bar.set(0)
+        self._reindex_progress_label.configure(
+            text=f"Re-indexing {self._truncate_path(folder_path, 40)}\u2026",
+            text_color=COLOR_GOLD,
+        )
+
+        def _progress_cb(processed: int, total: int, filename: str):
+            frac = processed / max(total, 1)
+            self.after(0, lambda: self._reindex_progress_bar.set(frac))
+            short = filename if len(filename) <= 30 else "\u2026" + filename[-29:]
+            self.after(0, lambda: self._reindex_progress_label.configure(
+                text=f"Re-indexing {processed}/{total}: {short}",
+                text_color=COLOR_TEXT_SECONDARY,
+            ))
+
+        def _run():
+            return self._app.engine.force_reindex_folder(
+                folder_path, index_name, on_progress=_progress_cb,
+            )
+
+        def _on_done(stats):
+            try:
+                btn.configure(state="normal", text="Re-index")
+                self._reindex_progress_bar.set(1.0)
+                self._reindex_progress_label.configure(
+                    text=(
+                        f"\u2713  Re-indexed {stats['files_processed']} files \u00B7 "
+                        f"{stats['total_vectors']} vectors ({stats['elapsed_seconds']:.1f}s)"
+                    ),
+                    text_color=COLOR_SUCCESS,
+                )
+                self._refresh_indexed_folders()
+                self._app.show_toast(
+                    f"Re-indexed {stats['total_vectors']} vectors",
+                    "success",
+                )
+            except Exception:
+                pass
+
+        def _on_error(error: str):
+            try:
+                btn.configure(state="normal", text="Re-index")
+                self._reindex_progress_bar.set(0)
+                self._reindex_progress_label.configure(
+                    text=f"\u2717  Re-index failed: {error}",
+                    text_color=COLOR_ERROR,
+                )
+            except Exception:
+                pass
+
+        worker = WorkerThread(
+            target=_run,
+            on_success=_on_done,
+            on_error=_on_error,
+            name="FolderReindexWorker",
+        )
+        worker.set_app_ref(self._app)
+        worker.start()
 
     # ══════════════════════════════════════════════════════════════════
     #  DRAG & DROP
@@ -504,6 +752,22 @@ class UploadScreen(ctk.CTkFrame):
             corner_radius=BORDER_RADIUS_XS,
             command=lambda idx=index: self._remove_file(idx),
         ).pack(side="right", padx=(0, PADDING_SM))
+
+        # OCR warning for image files when Tesseract is not available
+        if ext in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".webp"}:
+            try:
+                from desktop_app.ocr import get_ocr_status
+                if not get_ocr_status()["available"]:
+                    warn = ctk.CTkLabel(
+                        self._file_list,
+                        text="\u26A0 OCR required \u2014 install Tesseract to index this file",
+                        font=(FONT_FAMILY, FONT_SIZE_XXS),
+                        text_color=COLOR_WARNING,
+                        anchor="w",
+                    )
+                    warn.pack(fill="x", padx=(PADDING_MD, 0))
+            except Exception:
+                pass
 
     def _remove_file(self, index: int) -> None:
         if 0 <= index < len(self._selected_files):

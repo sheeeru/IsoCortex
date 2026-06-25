@@ -248,6 +248,7 @@ class IsoCortexEngine:
 
         # In-memory state
         self._loaded_indices: dict[str, dict] = {}  # name -> {vectors, metadata}
+        self._hnsw_indices: dict[str, Any] = {}   # name -> hnswlib.Index (loaded graphs)
         self._embed_model = None
         self._tokenizer = None
         self._ort_session = None
@@ -461,6 +462,11 @@ class IsoCortexEngine:
                 score       REAL NOT NULL DEFAULT 0,
                 note        TEXT NOT NULL DEFAULT '',
                 created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL DEFAULT ''
             );
         """)
         conn.commit()
@@ -1113,6 +1119,9 @@ class IsoCortexEngine:
         # Remove from disk
         shutil.rmtree(idx_dir, ignore_errors=True)
 
+        with self._lock:
+            self._hnsw_indices.pop(safe_name, None)
+
         # Remove document records from DB
         conn = self._get_db()
         try:
@@ -1181,6 +1190,42 @@ class IsoCortexEngine:
             except Exception as exc:
                 logger.error("Failed to load metadata for %s: %s", safe_name, exc)
 
+        # Load HNSW index from disk (if it exists)
+        hnsw_path = idx_dir / "hnsw.bin"
+        if hnsw_path.exists() and vectors is not None:
+            try:
+                import hnswlib
+                n, d = vectors.shape
+                hnsw_index = hnswlib.Index(space="cosine", dim=d)
+                hnsw_index.load_index(str(hnsw_path), max_elements=max(n, 1))
+                hnsw_index.set_ef(DEFAULT_HNSW_EF_SEARCH)
+                with self._lock:
+                    self._hnsw_indices[safe_name] = hnsw_index
+                logger.info("HNSW index loaded  name=%s  elements=%d", safe_name, n)
+            except Exception as exc:
+                logger.warning("HNSW index load failed for %s, will rebuild: %s", safe_name, exc)
+                # Rebuild from the raw vectors
+                if vectors is not None:
+                    try:
+                        hnsw_index = self._build_hnsw_index(vectors)
+                        if hnsw_index is not None:
+                            hnsw_index.save_index(str(hnsw_path))
+                            with self._lock:
+                                self._hnsw_indices[safe_name] = hnsw_index
+                    except Exception as exc2:
+                        logger.warning("HNSW rebuild also failed for %s: %s", safe_name, exc2)
+        elif vectors is not None and not hnsw_path.exists():
+            # First load after upgrading — build from existing vectors
+            logger.info("No HNSW index found for %s — building from vectors", safe_name)
+            try:
+                hnsw_index = self._build_hnsw_index(vectors)
+                if hnsw_index is not None:
+                    hnsw_index.save_index(str(hnsw_path))
+                    with self._lock:
+                        self._hnsw_indices[safe_name] = hnsw_index
+            except Exception as exc:
+                logger.warning("HNSW build on first load failed for %s: %s", safe_name, exc)
+
         with self._lock:
             self._loaded_indices[safe_name] = {
                 "vectors": vectors,
@@ -1200,6 +1245,7 @@ class IsoCortexEngine:
         safe_name = self._safe_index_name(name)
         with self._lock:
             self._loaded_indices.pop(safe_name, None)
+        self._hnsw_indices.pop(safe_name, None)
         logger.info("Index unloaded  name=%s", safe_name)
 
     # ------------------------------------------------------------------
@@ -1287,6 +1333,12 @@ class IsoCortexEngine:
             if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 logger.warning("Unsupported format: %s", path.suffix)
                 stats.files_failed += 1
+                continue
+
+            # Check exclusion patterns
+            if self.is_excluded(str(path)):
+                logger.info("Excluded by pattern: %s", path.name)
+                stats.files_scanned += 0
                 continue
 
             stats.files_accepted += 1
@@ -1580,7 +1632,14 @@ class IsoCortexEngine:
         # OCR fallback for images
         if ext in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".webp"}:
             try:
-                from desktop_app.ocr import ocr_image
+                from desktop_app.ocr import get_ocr_status, ocr_image
+                ocr_st = get_ocr_status()
+                if not ocr_st["available"]:
+                    logger.warning(
+                        "OCR required for %s but Tesseract is not installed. %s",
+                        file_path.name, ocr_st["install_cmd"],
+                    )
+                    return ""
                 return ocr_image(file_path)
             except Exception as exc:
                 logger.debug("OCR fallback failed for %s: %s", file_path.name, exc)
@@ -1689,7 +1748,14 @@ class IsoCortexEngine:
         # --- Strategy 3: OCR fallback for scanned PDFs ---
         logger.info("Text extraction low yield for %s, trying OCR", file_path.name)
         try:
-            from desktop_app.ocr import ocr_pdf
+            from desktop_app.ocr import get_ocr_status, ocr_pdf
+            ocr_st = get_ocr_status()
+            if not ocr_st["available"]:
+                logger.warning(
+                    "OCR needed for scanned PDF %s but Tesseract is not installed. %s",
+                    file_path.name, ocr_st["install_cmd"],
+                )
+                return text_result
             ocr_text = ocr_pdf(file_path)
             if ocr_text and len(ocr_text.strip()) > 50:
                 return ocr_text
@@ -1795,6 +1861,32 @@ class IsoCortexEngine:
         _flush()
         return chunks
 
+    def _build_hnsw_index(self, vectors: np.ndarray) -> Any:  # type: ignore[name-defined]
+        """Build an hnswlib HNSW graph from an (n, 384) float32 array.
+
+        Uses cosine space. Vectors do NOT need to be pre-normalized for
+        hnswlib's 'cosine' space — it normalizes internally.
+
+        Returns the hnswlib.Index object.
+        """
+        try:
+            import hnswlib
+        except ImportError:
+            logger.warning("hnswlib not installed — HNSW index unavailable")
+            return None
+
+        n, d = vectors.shape
+        index = hnswlib.Index(space="cosine", dim=d)
+        index.init_index(
+            max_elements=max(n, 1),
+            ef_construction=DEFAULT_HNSW_EF_CONSTRUCTION,
+            M=DEFAULT_HNSW_M,
+        )
+        index.set_ef(DEFAULT_HNSW_EF_SEARCH)
+        ids = list(range(n))
+        index.add_items(vectors, ids)
+        return index
+
     def _save_index_data(self, name: str, vectors: np.ndarray, metadata: list) -> None:  # type: ignore[name-defined]
         """Save vectors and metadata to disk.
 
@@ -1855,6 +1947,20 @@ class IsoCortexEngine:
             vectors_path.stat().st_size / (1024 * 1024),
         )
 
+        # Save HNSW graph (hnswlib native format)
+        hnsw_path = idx_dir / "hnsw.bin"
+        try:
+            hnsw_index = self._build_hnsw_index(vectors)
+            if hnsw_index is not None:
+                hnsw_index.save_index(str(hnsw_path))
+                # Cache in memory
+                with self._lock:
+                    self._hnsw_indices[name] = hnsw_index
+                logger.info("HNSW index saved  name=%s  elements=%d", name, n)
+        except Exception as exc:
+            logger.warning("HNSW index build failed for %s: %s", name, exc)
+            # Non-fatal — search will fall back to brute force
+
     # ------------------------------------------------------------------
     # Semantic Search
     # ------------------------------------------------------------------
@@ -1911,17 +2017,38 @@ class IsoCortexEngine:
         if np is None:
             raise ValueError("numpy is required for search operations")
 
-        # Compute cosine similarity
-        # Since embeddings are normalized, dot product = cosine similarity
-        scores = np.dot(vectors, query_vec)
-
-        # Get top-k indices
-        top_indices = np.argsort(scores)[::-1][:top_k]
+        # Use HNSW approximate nearest-neighbor search (O(log n))
+        # Falls back to brute-force O(n) if HNSW index is not available.
+        hnsw_index = self._hnsw_indices.get(safe_name)
+        if hnsw_index is not None:
+            try:
+                k = min(top_k, hnsw_index.get_current_count())
+                if k < 1:
+                    return []
+                labels, distances = hnsw_index.knn_query(
+                    query_vec.reshape(1, -1), k=k
+                )
+                # hnswlib cosine distance = 1 - cosine_similarity → invert
+                top_indices = labels[0].tolist()
+                scores_map = {int(lbl): float(1.0 - dist)
+                              for lbl, dist in zip(labels[0], distances[0])}
+            except Exception as exc:
+                logger.warning("HNSW query failed for %s, falling back to brute force: %s",
+                               safe_name, exc)
+                # Brute-force fallback
+                raw_scores = np.dot(vectors, query_vec)
+                top_indices = np.argsort(raw_scores)[::-1][:top_k].tolist()
+                scores_map = {int(i): float(raw_scores[i]) for i in top_indices}
+        else:
+            # No HNSW index — brute-force fallback
+            raw_scores = np.dot(vectors, query_vec)
+            top_indices = np.argsort(raw_scores)[::-1][:top_k].tolist()
+            scores_map = {int(i): float(raw_scores[i]) for i in top_indices}
 
         results = []
         query_lower = query.lower().split()
         for rank, idx in enumerate(top_indices):
-            score = float(scores[idx])
+            score = scores_map.get(int(idx), 0.0)
 
             # Skip near-zero results
             if score < 0.05:
@@ -2167,12 +2294,32 @@ class IsoCortexEngine:
                 if vectors is None or vectors.shape[0] == 0:
                     continue
 
-                # Compute cosine similarity with pre-computed query vector
-                scores = np.dot(vectors, query_vec)
-                top_indices = np.argsort(scores)[::-1][:10]
+                # HNSW approximate nearest-neighbor search (O(log n))
+                hnsw_index = self._hnsw_indices.get(safe_name)
+                if hnsw_index is not None:
+                    try:
+                        k = min(10, hnsw_index.get_current_count())
+                        if k < 1:
+                            continue
+                        labels, distances = hnsw_index.knn_query(
+                            query_vec.reshape(1, -1), k=k
+                        )
+                        top_indices = labels[0].tolist()
+                        scores_arr_map = {int(lbl): float(1.0 - dist)
+                                         for lbl, dist in zip(labels[0], distances[0])}
+                    except Exception as exc:
+                        logger.warning("HNSW query failed for %s (search_all), brute force: %s",
+                                       safe_name, exc)
+                        raw_scores = np.dot(vectors, query_vec)
+                        top_indices = np.argsort(raw_scores)[::-1][:10].tolist()
+                        scores_arr_map = {int(i): float(raw_scores[i]) for i in top_indices}
+                else:
+                    raw_scores = np.dot(vectors, query_vec)
+                    top_indices = np.argsort(raw_scores)[::-1][:10].tolist()
+                    scores_arr_map = {int(i): float(raw_scores[i]) for i in top_indices}
 
                 for rank, idx in enumerate(top_indices):
-                    score = float(scores[idx])
+                    score = scores_arr_map.get(int(idx), 0.0)
                     if score < 0.05:
                         continue
 
@@ -2229,7 +2376,7 @@ class IsoCortexEngine:
             total_chunks = 0
             total_words = 0
 
-            parts = ["[IsoCortex Library Data]"]
+            parts = ["[Library Stats]"]
 
             for idx in indexes:
                 # Per-index aggregate stats
@@ -2257,8 +2404,8 @@ class IsoCortexEngine:
                     f"{w_count:,} words total"
                 )
 
-                # List every file in this index
-                if f_count > 0:
+                # List files (compact — skip if too many to save context tokens)
+                if f_count > 0 and f_count <= 20:
                     file_rows = conn.execute(
                         "SELECT file_path, format_category, chunk_count, word_count "
                         "FROM documents WHERE index_name = ? AND status = 'indexed' "
@@ -2269,7 +2416,6 @@ class IsoCortexEngine:
                     parts.append("  Files:")
                     for fr in file_rows:
                         fpath = fr[0]
-                        # Show just the filename for readability
                         fname = os.path.basename(fpath) if fpath else "unknown"
                         fmt = fr[1] or "unknown"
                         chunks = fr[2] or 0
@@ -2277,6 +2423,8 @@ class IsoCortexEngine:
                         parts.append(
                             f"    - {fname} [{fmt}] — {chunks} chunks, {words:,} words"
                         )
+                elif f_count > 20:
+                    parts.append(f"  ({f_count} files indexed — listing omitted to save context)")
 
             # Watched folders
             watch_rows = conn.execute(
@@ -2458,6 +2606,33 @@ class IsoCortexEngine:
             for row in rows
         ]
 
+    def get_recent_searches(self, limit: int = 10) -> list[dict]:
+        """Return recent search history entries."""
+        try:
+            conn = self._get_db()
+            rows = conn.execute(
+                "SELECT query, results_count, created_at FROM search_history ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+        except Exception as exc:
+            logger.warning("get_recent_searches failed: %s", exc)
+            return []
+
+    def get_document_breakdown(self) -> dict:
+        """Return document counts and word counts grouped by format_category."""
+        try:
+            conn = self._get_db()
+            rows = conn.execute(
+                "SELECT format_category, COUNT(*) as count, SUM(word_count) as words "
+                "FROM documents WHERE status = 'indexed' "
+                "GROUP BY format_category"
+            ).fetchall()
+            return {r["format_category"]: {"count": r["count"], "words": r["words"] or 0} for r in rows}
+        except Exception as exc:
+            logger.warning("get_document_breakdown failed: %s", exc)
+            return {}
+
     def update_conversation_title(self, conversation_id: str, title: str) -> None:
         """Update the title of a conversation."""
         conn = self._get_db()
@@ -2466,6 +2641,24 @@ class IsoCortexEngine:
             (title[:100], conversation_id),
         )
         conn.commit()
+
+    def load_conversation_messages(self, conversation_id: str) -> list[dict]:
+        """Load all messages for a given conversation (alias for get_conversation_messages)."""
+        return self.get_conversation_messages(conversation_id)
+
+    def rename_conversation(self, conversation_id: str, new_title: str) -> bool:
+        """Rename a conversation. Returns True on success."""
+        try:
+            conn = self._get_db()
+            conn.execute(
+                "UPDATE chat_conversations SET title = ?, updated_at = datetime('now') WHERE conversation_id = ?",
+                (new_title.strip()[:80], conversation_id),
+            )
+            conn.commit()
+            return True
+        except Exception as exc:
+            logger.warning("rename_conversation failed: %s", exc)
+            return False
 
     def delete_conversation(self, conversation_id: str) -> None:
         """Delete a conversation and all its messages."""
@@ -2659,6 +2852,14 @@ class IsoCortexEngine:
 
     def get_settings(self) -> dict:
         """Return all current settings and configuration."""
+        exclusion_raw = ""
+        try:
+            conn = self._get_db()
+            row = conn.execute("SELECT value FROM app_settings WHERE key = 'exclusion_patterns'").fetchone()
+            if row:
+                exclusion_raw = row[0]
+        except Exception:
+            pass
         return {
             "data_dir": str(self._data_dir),
             "indices_dir": str(self._indices_dir),
@@ -2675,6 +2876,96 @@ class IsoCortexEngine:
                 "overlap": DEFAULT_OVERLAP,
             },
             "batch_size": DEFAULT_BATCH_SIZE,
+            "exclusion_patterns": exclusion_raw,
+        }
+
+    def get_exclusion_patterns(self) -> list[str]:
+        """Return saved exclusion glob patterns."""
+        exclusion_raw = self.get_settings().get("exclusion_patterns", "")
+        if exclusion_raw and exclusion_raw.strip():
+            return [p.strip() for p in exclusion_raw.split("\n") if p.strip()]
+        return [
+            ".git", ".git/**", "node_modules", "node_modules/**",
+            "__pycache__", "*.pyc", ".DS_Store", "*.tmp", "*.log",
+            ".env", "*.env", "venv/**", ".venv/**",
+        ]
+
+    def set_exclusion_patterns(self, patterns: list[str]) -> None:
+        """Save exclusion glob patterns."""
+        conn = self._get_db()
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+            ("exclusion_patterns", "\n".join(patterns)),
+        )
+        conn.commit()
+
+    def is_excluded(self, file_path: str, patterns: list[str] | None = None) -> bool:
+        """Check if a file path matches any exclusion pattern."""
+        import fnmatch
+        patterns = patterns or self.get_exclusion_patterns()
+        p = Path(file_path)
+        name = p.name
+        path_str = str(p)
+        for pattern in patterns:
+            if fnmatch.fnmatch(name, pattern):
+                return True
+            if fnmatch.fnmatch(path_str, f"*/{pattern}") or fnmatch.fnmatch(path_str, f"*/{pattern}/*"):
+                return True
+        return False
+
+    # ------------------------------------------------------------------
+    # Force Re-Indexing
+    # ------------------------------------------------------------------
+
+    def force_reindex_file(self, file_path: str, index_name: str = "default") -> dict:
+        """Force re-ingestion of a specific file, bypassing the checksum cache."""
+        try:
+            conn = self._get_db()
+            conn.execute(
+                "DELETE FROM documents WHERE file_path = ? AND index_name = ?",
+                (str(file_path), index_name),
+            )
+            conn.commit()
+        except Exception as exc:
+            logger.warning("force_reindex_file DB clear failed: %s", exc)
+        # Now re-run ingestion on just this file
+        result = self.ingest_files(index_name, [file_path])
+        return {
+            "files_processed": result.files_processed,
+            "total_chunks": result.total_chunks,
+            "total_vectors": result.total_vectors,
+            "elapsed_seconds": result.elapsed_seconds,
+            "files_failed": result.files_failed,
+        }
+
+    def force_reindex_folder(
+        self,
+        folder_path: str,
+        index_name: str = "default",
+        on_progress=None,
+    ) -> dict:
+        """Force re-ingestion of all files in a folder."""
+        try:
+            conn = self._get_db()
+            conn.execute(
+                "DELETE FROM documents WHERE file_path LIKE ? AND index_name = ?",
+                (str(folder_path) + "%", index_name),
+            )
+            conn.commit()
+        except Exception as exc:
+            logger.warning("force_reindex_folder DB clear failed: %s", exc)
+        files = [
+            str(f) for f in Path(folder_path).rglob("*")
+            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+            and not self.is_excluded(str(f))
+        ]
+        result = self.ingest_files(index_name, files, progress_callback=on_progress)
+        return {
+            "files_processed": result.files_processed,
+            "total_chunks": result.total_chunks,
+            "total_vectors": result.total_vectors,
+            "elapsed_seconds": result.elapsed_seconds,
+            "files_failed": result.files_failed,
         }
 
     # ------------------------------------------------------------------

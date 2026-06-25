@@ -55,6 +55,7 @@ docs/*.fdb_latexmk
 *.lib
 *.dylib
 *.dll
+*.exe
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
@@ -63,10 +64,23 @@ CMakeCache.txt
 # --- PyInstaller ---
 *.spec
 
+# --- ML model binaries (use Git LFS if you need to track these) ---
+*.onnx
+*.pt
+*.pth
+*.h5
+*.safetensors
+*.gguf
+
 # --- IsoCortex data (never commit user data) ---
 .isocortex/
 *.bin
 vectors.bin
+
+# --- Database files ---
+*.db
+*.sqlite
+*.sqlite3
 
 # --- Environment & secrets ---
 .env
@@ -98,6 +112,12 @@ docker-compose.override.yml
 
 # --- Dev-only (not for production) ---
 worklog.md
+
+# --- Distribution archives ---
+*.zip
+*.tar.gz
+*.rar
+*.7z
 
 # --- Misc ---
 *.log

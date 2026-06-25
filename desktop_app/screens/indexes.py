@@ -27,7 +27,7 @@ from desktop_app.theme import (
     COLOR_BORDER, COLOR_BORDER_LIGHT,
     COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
     COLOR_SHADOW, COLOR_SURFACE_1,
-    FONT_FAMILY, FONT_FAMILY_MONO,
+    FONT_FAMILY, FONT_FAMILY_DISPLAY, FONT_FAMILY_MONO,
     FONT_SIZE_TITLE, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_XXS,
     BORDER_RADIUS, BORDER_RADIUS_SM, BORDER_RADIUS_LG,
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
@@ -121,7 +121,7 @@ class IndexesScreen(ctk.CTkFrame):
         ctk.CTkLabel(
             title_block,
             text="Indexes",
-            font=(FONT_FAMILY, FONT_SIZE_TITLE, "bold"),
+            font=(FONT_FAMILY_DISPLAY, FONT_SIZE_TITLE, "bold"),
             text_color=COLOR_TEXT,
             anchor="w",
         ).pack(anchor="w")

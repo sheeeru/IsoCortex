@@ -270,6 +270,8 @@ class RAGWorker(threading.Thread):
         query: str,
         conversation_messages: list[dict],
         system_prompt: str,
+        top_k: int = 5,
+        index_name: Optional[str] = None,
         on_context_ready: Optional[Callable] = None,
         on_token: Optional[Callable] = None,
         on_complete: Optional[Callable] = None,
@@ -282,6 +284,8 @@ class RAGWorker(threading.Thread):
         self._query = query
         self._conversation_messages = conversation_messages
         self._system_prompt = system_prompt
+        self._top_k = top_k
+        self._index_name = index_name
         self._on_context_ready = on_context_ready
         self._on_token = on_token
         self._on_complete = on_complete
@@ -310,7 +314,30 @@ class RAGWorker(threading.Thread):
 
         try:
             # ── Phase 1: RAG retrieval ──────────────────────────────
-            context_str, sources = self._engine.build_rag_context(self._query, top_k=5)
+            if self._index_name:
+                context_parts = []
+                source_parts = []
+                for src in self._engine.search(self._index_name, self._query, top_k=self._top_k):
+                    sp = {
+                        "index": len(source_parts) + 1,
+                        "file": src.source_file or "unknown",
+                        "score": round(src.score, 3),
+                        "keyword_score": 0,
+                        "page": src.page_number or 0,
+                        "format": src.format_category or "",
+                        "full_text": src.full_text or src.text or "",
+                        "chunk_text": src.full_text or src.text or "",
+                    }
+                    source_parts.append(sp)
+                doc_context = "\n\n---\n\n".join(
+                    f"[Source {s['index']}] ({s['file']}" + (f", page {s['page']}" if s['page'] else "") + f"):\n{s['full_text']}" for s in source_parts
+                ) if source_parts else ""
+                # Always include library stats so AI can answer meta questions
+                stats = self._engine._build_stats_summary() or ""
+                context_str = stats + ("\n\n" + doc_context if doc_context else "")
+                sources = source_parts
+            else:
+                context_str, sources = self._engine.build_rag_context(self._query, top_k=self._top_k)
             self._sources = sources
 
             # Notify GUI that context is ready (sources can be shown)

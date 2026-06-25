@@ -15,6 +15,7 @@ Website-inspired enhancements:
 import logging
 import os
 import sys
+import webbrowser
 import customtkinter as ctk
 from pathlib import Path
 
@@ -34,7 +35,8 @@ from desktop_app.theme import (
     PADDING, PADDING_SM, PADDING_MD, PADDING_LG, PADDING_XL,
     ThemeMode, GradientCanvas, create_gradient_bar,
     AnimatedLogo, GlassCard, GradientDivider,
-    ShimmerBar, create_badge, _dim_hex,
+    create_badge, _dim_hex, _blend_colors,
+    apply_ctk_theme, FONT_FAMILY_DISPLAY,
 )
 from desktop_app.engine import IsoCortexEngine
 
@@ -94,9 +96,20 @@ class IsoCortexApp(ctk.CTk):
             ctk.set_default_color_theme("blue")
         except Exception:
             pass
+        # Recolor CustomTkinter's default widgets to the IsoCortex palette so
+        # switches, sliders, dropdowns, progress bars, etc. never fall back to
+        # the stock blue accent. Cosmetic only — overwrites existing keys.
+        try:
+            apply_ctk_theme()
+        except Exception:
+            pass
 
         # ── Build UI ─────────────────────────────────────────────────
         self._build_layout()
+
+        # ── Update check (delayed 3 seconds) ──────────────────────────
+        self._update_banner = None  # will hold the banner frame
+        self.after(3000, self._check_for_updates)
 
         # ── Show initial screen ──────────────────────────────────────
         if self.engine.is_first_run():
@@ -224,170 +237,96 @@ class IsoCortexApp(ctk.CTk):
         self._sidebar.pack_propagate(False)
         sidebar = self._sidebar
 
-        # ── Top animated shimmer gradient bar ────────────────────────
-        ShimmerBar(sidebar, height=3, duration=4000).pack(fill="x", side="top")
+        # ── Top accent gradient bar (purple → gold, static) ─────────
+        from desktop_app.theme import create_gradient_bar
+        create_gradient_bar(sidebar, height=2).pack(fill="x", side="top")
 
-        # ── Logo area with animated glow ─────────────────────────────
+        # ── Logo area — clean wordmark, no heavy card ────────────────
         logo_container = ctk.CTkFrame(sidebar, fg_color="transparent")
         logo_container.pack(fill="x", padx=PADDING, pady=(PADDING_LG, PADDING_MD))
 
-        # Logo card with subtle glow border
-        logo_glow_wrapper = ctk.CTkFrame(
-            logo_container,
-            fg_color=COLOR_SHADOW,
-            corner_radius=BORDER_RADIUS_LG + 3,
-        )
-        logo_glow_wrapper.pack(fill="x")
+        logo_inner = ctk.CTkFrame(logo_container, fg_color="transparent")
+        logo_inner.pack(fill="x")
 
-        logo_card = ctk.CTkFrame(
-            logo_glow_wrapper,
-            fg_color=COLOR_SURFACE_1,
-            corner_radius=BORDER_RADIUS_LG,
-            border_width=1,
-            border_color=COLOR_BORDER,
-        )
-        logo_card.pack(fill="x", padx=2, pady=2)
-        logo_card.pack_propagate(False)
-        logo_card.configure(height=56)
-
-        logo_inner = ctk.CTkFrame(logo_card, fg_color="transparent")
-        logo_inner.pack(fill="both", expand=True)
-
-        # Animated logo image with pulsing glow (website-inspired)
+        # Animated logo image
         try:
-            self._animated_logo = AnimatedLogo(logo_inner, logo_size=36)
-            self._animated_logo.pack(side="left", padx=(PADDING, PADDING_SM))
+            self._animated_logo = AnimatedLogo(logo_inner, logo_size=28)
+            self._animated_logo.pack(side="left", padx=(0, PADDING_SM))
         except Exception:
-            # Fallback to text logo
             pass
 
-        # Iso in purple
+        # "Iso" in amethyst + "Cortex" in champagne — display cut, editorial
         ctk.CTkLabel(
             logo_inner,
             text="Iso",
-            font=(FONT_FAMILY, FONT_SIZE_HERO, "bold"),
-            text_color=COLOR_PURPLE,
+            font=(FONT_FAMILY_DISPLAY, 22, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
             anchor="w",
         ).pack(side="left")
 
-        # Cortex in gold
         ctk.CTkLabel(
             logo_inner,
             text="Cortex",
-            font=(FONT_FAMILY, FONT_SIZE_HERO, "bold"),
+            font=(FONT_FAMILY_DISPLAY, 22, "bold"),
             text_color=COLOR_GOLD,
             anchor="w",
         ).pack(side="left")
 
-        # Version badge (pill-shaped, website-style)
+        # Version pill — right-aligned, very subtle
         version_badge = ctk.CTkFrame(
             logo_inner,
-            fg_color=_dim_hex(COLOR_PURPLE, 0.15),
-            corner_radius=10,
+            fg_color=_blend_colors(COLOR_BG_ELEVATED, COLOR_PURPLE, 0.12),
+            corner_radius=8,
             border_width=1,
-            border_color=_dim_hex(COLOR_PURPLE, 0.3),
-            height=18,
+            border_color=_blend_colors(COLOR_BORDER, COLOR_PURPLE, 0.3),
+            height=16,
         )
-        version_badge.pack(side="right", padx=(0, PADDING))
+        version_badge.pack(side="right")
         version_badge.pack_propagate(False)
 
         ctk.CTkLabel(
             version_badge,
-            text=" v2.0 ",
-            font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+            text=" v2 ",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
             text_color=COLOR_PURPLE_LIGHT,
         ).place(relx=0.5, rely=0.5, anchor="center")
 
         # ── Gradient divider (website: .section-divider) ─────────────
         GradientDivider(sidebar, height=1).pack(fill="x", padx=PADDING)
 
-        # ── Navigation section label with badge ──────────────────────
-        nav_label = ctk.CTkFrame(sidebar, fg_color="transparent")
-        nav_label.pack(fill="x", padx=(PADDING_LG, PADDING), pady=(PADDING_SM, PADDING_SM))
 
-        ctk.CTkLabel(
-            nav_label,
-            text="NAVIGATION",
-            font=(FONT_FAMILY, FONT_SIZE_XXS),
-            text_color=COLOR_TEXT_DIM,
-            anchor="w",
-        ).pack(side="left")
-
-        # ── Navigation buttons ──────────────────────────────────────
-        self._nav_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
-        self._nav_frame.pack(fill="x", padx=PADDING, pady=(0, PADDING_SM))
-
-        nav_items = [
-            ("dashboard", "Dashboard"),
-            ("upload",    "Upload Files"),
-            ("search",    "AI Chat"),
-            ("indexes",   "Indexes"),
-            ("settings",  "Settings"),
-        ]
-
-        for i, (screen_id, label) in enumerate(nav_items):
-            btn = self._build_nav_button(self._nav_frame, screen_id, label)
-            btn.pack(fill="x", pady=2)
-            # Staggered entrance animation delay (website pattern)
-            self._nav_frame.after(i * 80, lambda b=btn: self._nav_button_entrance(b))
-            self._sidebar_buttons[screen_id] = btn
-
-        # ── Spacer ──────────────────────────────────────────────────
-        spacer = ctk.CTkFrame(self._nav_frame, fg_color="transparent")
-        spacer.pack(fill="both", expand=True)
-
-        # ── Bottom gradient divider (static — reduced animation load) ─────
-        GradientDivider(sidebar, height=1).pack(fill="x", padx=PADDING, pady=(0, PADDING_SM))
-
-        # ── User info section (GlassCard style) ────────────────────
-        self._user_glow = ctk.CTkFrame(
-            sidebar,
-            fg_color=COLOR_SHADOW,
-            corner_radius=BORDER_RADIUS_LG + 2,
-        )
-        self._user_glow.pack(fill="x", padx=PADDING, pady=(0, PADDING))
+        # ── User info + bottom divider — packed side="bottom" FIRST ───
+        # (tkinter requirement: bottom-anchored items must be packed before
+        #  any expanding widget, otherwise the expander claims all space first)
 
         self._user_frame = ctk.CTkFrame(
-            self._user_glow,
+            sidebar,
             fg_color=COLOR_SURFACE_1,
             corner_radius=BORDER_RADIUS_LG,
             border_width=1,
-            border_color=COLOR_BORDER_LIGHT,
+            border_color=COLOR_BORDER,
         )
-        self._user_frame.pack(fill="x", padx=2, pady=2)
+        self._user_frame.pack(side="bottom", fill="x", padx=PADDING, pady=(0, PADDING))
 
         user_inner = ctk.CTkFrame(self._user_frame, fg_color="transparent")
-        user_inner.pack(fill="x", padx=PADDING, pady=PADDING_MD)
+        user_inner.pack(fill="x", padx=PADDING_MD, pady=PADDING_MD)
 
-        # Avatar circle with static purple glow
-        avatar_container = ctk.CTkFrame(user_inner, fg_color="transparent", width=44, height=44)
-        avatar_container.pack(side="left", padx=(0, PADDING_MD))
-        avatar_container.pack_propagate(False)
-
-        # Static glow behind avatar (no animation timer needed)
-        try:
-            avatar_glow_bg = ctk.CTkFrame(
-                avatar_container, fg_color=_dim_hex(COLOR_PURPLE, 0.3),
-                corner_radius=22,
-            )
-            avatar_glow_bg.place(relx=0.5, rely=0.5, anchor="center")
-        except Exception:
-            pass
-
+        # Avatar circle
         avatar = ctk.CTkFrame(
-            avatar_container,
-            width=36,
-            height=36,
-            fg_color=COLOR_PURPLE,
-            corner_radius=18,
+            user_inner,
+            width=32,
+            height=32,
+            fg_color=_blend_colors(COLOR_BG_ELEVATED, COLOR_PURPLE, 0.4),
+            corner_radius=16,
         )
-        avatar.place(relx=0.5, rely=0.5, anchor="center")
+        avatar.pack(side="left", padx=(0, PADDING_SM))
+        avatar.pack_propagate(False)
 
         self._avatar_label = ctk.CTkLabel(
             avatar,
             text="?",
-            font=(FONT_FAMILY, FONT_SIZE_MEDIUM, "bold"),
-            text_color="#ffffff",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+            text_color=COLOR_PURPLE_LIGHT,
         )
         self._avatar_label.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -398,7 +337,7 @@ class IsoCortexApp(ctk.CTk):
         self._user_label = ctk.CTkLabel(
             user_text,
             text="",
-            font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
             text_color=COLOR_TEXT,
             anchor="w",
         )
@@ -415,45 +354,130 @@ class IsoCortexApp(ctk.CTk):
 
         # Sign out button
         self._logout_btn = ctk.CTkButton(
-            self._user_frame,
-            text="Sign Out",
-            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            user_inner,
+            text="↩",
+            font=(FONT_FAMILY, FONT_SIZE_MEDIUM),
             fg_color="transparent",
-            hover_color="#2a1520",
-            text_color=COLOR_ERROR,
-            height=32,
+            hover_color=_blend_colors(COLOR_BG_ELEVATED, COLOR_ERROR, 0.2),
+            text_color=COLOR_TEXT_DIM,
+            width=28,
+            height=28,
             corner_radius=BORDER_RADIUS_SM,
             anchor="center",
             command=self._handle_logout,
         )
-        # Sign out packed inside user frame, below user info
-        self._logout_btn_inner = ctk.CTkFrame(self._user_frame, fg_color="transparent")
-        self._logout_btn_inner.pack(fill="x", padx=PADDING_SM, pady=(0, PADDING_SM))
-        self._logout_btn.pack(fill="x", in_=self._logout_btn_inner)
+        self._logout_btn.pack(side="right")
+        self._logout_btn_inner = None
+
+        # Bottom gradient divider (above user card)
+        GradientDivider(sidebar, height=1).pack(side="bottom", fill="x", padx=PADDING, pady=(0, PADDING_SM))
+
+        # ── Navigation frame ──────────────────────────────────────────
+        self._nav_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
+        self._nav_frame.pack(fill="x", padx=PADDING_SM, pady=(0, PADDING_SM))
+
+        workspace_items = [
+            ("dashboard", "Dashboard",   "◈"),
+            ("upload",    "Upload",      "⊕"),
+            ("search",    "AI Chat",     "⊘"),
+            ("indexes",   "Indexes",     "▦"),
+        ]
+        system_items = [
+            ("settings",  "Settings",   "◎"),
+        ]
+
+        self._sidebar_indicators: dict[str, ctk.CTkFrame] = {}
+        self._sidebar_icon_labels: dict[str, ctk.CTkLabel] = {}
+
+        # ── WORKSPACE section ──────────────────────────────────────────
+        ctk.CTkLabel(
+            self._nav_frame,
+            text="WORKSPACE",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+        ).pack(fill="x", padx=(PADDING_SM, PADDING_SM), pady=(PADDING_SM, 0))
+
+        for i, (screen_id, label, icon) in enumerate(workspace_items):
+            btn, indicator, icon_lbl = self._build_nav_button(self._nav_frame, screen_id, label, icon)
+            self._nav_frame.after(i * 70, lambda b=btn: self._nav_button_entrance(b))
+            self._sidebar_buttons[screen_id] = btn
+            self._sidebar_indicators[screen_id] = indicator
+            self._sidebar_icon_labels[screen_id] = icon_lbl
+
+        # ── SYSTEM section ─────────────────────────────────────────────
+        ctk.CTkLabel(
+            self._nav_frame,
+            text="SYSTEM",
+            font=(FONT_FAMILY, FONT_SIZE_XXS),
+            text_color=COLOR_TEXT_DIM,
+            anchor="w",
+        ).pack(fill="x", padx=(PADDING_SM, PADDING_SM), pady=(PADDING_SM, 0))
+
+        for i, (screen_id, label, icon) in enumerate(system_items):
+            btn, indicator, icon_lbl = self._build_nav_button(self._nav_frame, screen_id, label, icon)
+            self._nav_frame.after(i * 70, lambda b=btn: self._nav_button_entrance(b))
+            self._sidebar_buttons[screen_id] = btn
+            self._sidebar_indicators[screen_id] = indicator
+            self._sidebar_icon_labels[screen_id] = icon_lbl
+
 
     def _nav_button_entrance(self, btn):
-        """Simulate a fade-in entrance for nav buttons."""
+        """Simulate a subtle flash entrance for nav buttons."""
         try:
-            btn.configure(fg_color=_dim_hex(COLOR_PURPLE, 0.1))
-            self.after(150, lambda: btn.configure(fg_color="transparent"))
+            btn.configure(text_color=COLOR_TEXT)
+            self.after(200, lambda: btn.configure(text_color=COLOR_TEXT_SECONDARY))
         except Exception:
             pass
 
-    def _build_nav_button(self, parent, screen_id: str, label: str) -> ctk.CTkButton:
-        """Create a premium navigation button with label."""
-        btn = ctk.CTkButton(
-            parent,
-            text=f"    {label}",
+    def _build_nav_button(self, parent, screen_id: str, label: str, icon: str = "•"):
+        """Fixed-height nav row using place() — bypasses CTK button height inflation on macOS.
+        Returns (text_label, indicator_frame, icon_label).
+        """
+        ROW_H = 36
+
+        # pack_propagate(False) locks the row at exactly ROW_H — no child can stretch it
+        row = ctk.CTkFrame(parent, fg_color="transparent", height=ROW_H, corner_radius=BORDER_RADIUS_SM)
+        row.pack(fill="x", pady=1)
+        row.pack_propagate(False)
+
+        # Indicator bar — width/height in constructor (CTK blocks them in place())
+        indicator = ctk.CTkFrame(row, width=3, height=ROW_H - 10, fg_color="transparent", corner_radius=2)
+        indicator.place(x=3, y=5)
+
+        # Icon pill — absolutely placed
+        icon_pill = ctk.CTkFrame(row, width=26, height=26, fg_color=COLOR_BG_ELEVATED, corner_radius=BORDER_RADIUS_SM)
+        icon_pill.place(x=10, y=5)
+
+        icon_lbl = ctk.CTkLabel(
+            icon_pill,
+            text=icon,
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+            text_color=COLOR_TEXT_SECONDARY,
+        )
+        icon_lbl.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Text label — height in constructor, relwidth fills remaining row space
+        btn = ctk.CTkLabel(
+            row,
+            text=f"  {label}",
             font=(FONT_FAMILY, FONT_SIZE_NORMAL),
-            fg_color="transparent",
-            hover_color=COLOR_BG_HOVER,
             text_color=COLOR_TEXT_SECONDARY,
             anchor="w",
-            height=42,
-            corner_radius=BORDER_RADIUS_SM,
-            command=lambda s=screen_id: self.show_screen(s),
+            fg_color="transparent",
+            height=ROW_H - 8,
         )
-        return btn
+        btn.place(x=42, y=4, relwidth=1.0)
+
+        # Hover + click on every part of the row
+        def _enter(e, r=row): r.configure(fg_color=COLOR_BG_HOVER)
+        def _leave(e, r=row): r.configure(fg_color="transparent")
+        for w in (row, icon_pill, icon_lbl, btn):
+            w.bind("<Button-1>", lambda e, s=screen_id: self.show_screen(s))
+            w.bind("<Enter>", _enter)
+            w.bind("<Leave>", _leave)
+
+        return btn, indicator, icon_lbl
 
     def _build_separator(self, parent) -> None:
         """Build a gradient divider line (website-inspired)."""
@@ -464,22 +488,47 @@ class IsoCortexApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────
 
     def _update_sidebar_active(self, screen_id: str) -> None:
-        """Highlight the active navigation button with purple accent."""
+        """Highlight the active nav row — pill turns purple, label bold white, row tinted."""
         for sid, btn in self._sidebar_buttons.items():
+            indicator = self._sidebar_indicators.get(sid)
+            icon_lbl = self._sidebar_icon_labels.get(sid)
+            row = getattr(btn, "master", None)
             if sid == screen_id:
-                btn.configure(
-                    fg_color=COLOR_PURPLE,
-                    hover_color=COLOR_PURPLE_DARK,
-                    text_color="#ffffff",
-                    font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"),
-                )
+                try:
+                    if row:
+                        row.configure(fg_color=_blend_colors(COLOR_SIDEBAR_BG, COLOR_PURPLE, 0.22))
+                    btn.configure(text_color=COLOR_TEXT, font=(FONT_FAMILY, FONT_SIZE_NORMAL, "bold"))
+                except Exception:
+                    pass
+                if indicator:
+                    try:
+                        indicator.configure(fg_color=COLOR_PURPLE)
+                    except Exception:
+                        pass
+                if icon_lbl:
+                    try:
+                        icon_lbl.master.configure(fg_color=COLOR_PURPLE)
+                        icon_lbl.configure(text_color="#ffffff", font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"))
+                    except Exception:
+                        pass
             else:
-                btn.configure(
-                    fg_color="transparent",
-                    hover_color=COLOR_BG_HOVER,
-                    text_color=COLOR_TEXT_SECONDARY,
-                    font=(FONT_FAMILY, FONT_SIZE_NORMAL),
-                )
+                try:
+                    if row:
+                        row.configure(fg_color="transparent")
+                    btn.configure(text_color=COLOR_TEXT_SECONDARY, font=(FONT_FAMILY, FONT_SIZE_NORMAL))
+                except Exception:
+                    pass
+                if indicator:
+                    try:
+                        indicator.configure(fg_color="transparent")
+                    except Exception:
+                        pass
+                if icon_lbl:
+                    try:
+                        icon_lbl.master.configure(fg_color=COLOR_BG_ELEVATED)
+                        icon_lbl.configure(text_color=COLOR_TEXT_SECONDARY, font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"))
+                    except Exception:
+                        pass
 
     def _update_user_info(self) -> None:
         """Update the user info section in the sidebar."""
@@ -491,7 +540,7 @@ class IsoCortexApp(ctk.CTk):
                 self._user_label.configure(text=username)
                 self._avatar_label.configure(text=initial)
                 self._user_role_label.configure(text="Offline Mode")
-                self._logout_btn_inner.pack(fill="x", padx=PADDING_SM, pady=(0, PADDING_SM))
+                self._logout_btn.pack(side="right")
             except Exception:
                 pass
         else:
@@ -499,7 +548,7 @@ class IsoCortexApp(ctk.CTk):
                 self._user_label.configure(text="Not signed in")
                 self._avatar_label.configure(text="?")
                 self._user_role_label.configure(text="")
-                self._logout_btn_inner.pack_forget()
+                self._logout_btn.pack_forget()
             except Exception:
                 pass
 
@@ -527,9 +576,30 @@ class IsoCortexApp(ctk.CTk):
         if not force and screen_id not in auth_free_screens and not self.engine.is_authenticated:
             screen_id = "login"
 
-        # Clear current screen
+        # Clear current screen — use _safe_destroy to avoid Python 3.14 / CTkButton _font bug
+        def _safe_destroy(w):
+            """Patch CTkButton children lacking _font before destroying."""
+            if w is None:
+                return
+            def _patch(widget):
+                try:
+                    if not hasattr(widget, '_font'):
+                        widget._font = None
+                except Exception:
+                    pass
+                try:
+                    for child in widget.winfo_children():
+                        _patch(child)
+                except Exception:
+                    pass
+            _patch(w)
+            try:
+                w.destroy()
+            except Exception:
+                pass
+
         for widget in self._screen_container.winfo_children():
-            widget.destroy()
+            _safe_destroy(widget)
 
         self._current_screen = screen_id
 
@@ -594,6 +664,129 @@ class IsoCortexApp(ctk.CTk):
         """Handle user logout."""
         self.engine.logout()
         self.show_screen("login")
+
+    # ─────────────────────────────────────────────────────────────────
+    # Update Notifier
+    # ─────────────────────────────────────────────────────────────────
+
+    def _check_for_updates(self):
+        """Check for updates in the background and show banner if available."""
+        try:
+            from desktop_app.updater import check_for_updates
+            check_for_updates(callback=self._on_update_check_done)
+        except Exception as exc:
+            logger.debug("Update check init failed: %s", exc)
+
+    def _on_update_check_done(self, latest_version: str | None):
+        """Called on the main thread when update check completes."""
+        if not latest_version:
+            return
+
+        try:
+            self._show_update_banner(latest_version)
+        except Exception as exc:
+            logger.debug("Failed to show update banner: %s", exc)
+
+    def _show_update_banner(self, latest_version: str):
+        """Show a dismissable update notification banner at the top of the content area."""
+        if self._update_banner is not None:
+            return  # already showing
+
+        try:
+            from desktop_app.theme import (
+                COLOR_GOLD, COLOR_GOLD_LIGHT, COLOR_TEXT,
+                COLOR_TEXT_SECONDARY, COLOR_BG_ELEVATED,
+                FONT_FAMILY, FONT_SIZE_SMALL, FONT_SIZE_XXS,
+                BORDER_RADIUS_SM, PADDING, PADDING_SM,
+            )
+        except Exception:
+            return
+
+        self._update_banner = ctk.CTkFrame(
+            self._content_frame,
+            fg_color=COLOR_BG_ELEVATED,
+            corner_radius=BORDER_RADIUS_SM,
+            height=44,
+        )
+        self._update_banner.pack_propagate(False)
+
+        # Pack at the TOP of content_frame, BEFORE the screen container
+        self._update_banner.pack(
+            side="top", fill="x",
+            padx=PADDING, pady=(PADDING_SM, 0),
+            before=self._screen_container,
+        )
+
+        # Banner content
+        inner = ctk.CTkFrame(self._update_banner, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=PADDING_SM)
+
+        # Gold accent dot
+        ctk.CTkLabel(
+            inner, text="●",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            text_color=COLOR_GOLD,
+        ).pack(side="left", padx=(0, PADDING_SM))
+
+        # Update text
+        ctk.CTkLabel(
+            inner,
+            text=f"IsoCortex v{latest_version} is available",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL, "bold"),
+            text_color=COLOR_TEXT,
+            anchor="w",
+        ).pack(side="left")
+
+        # View Release button
+        release_btn = ctk.CTkButton(
+            inner,
+            text="View Release",
+            font=(FONT_FAMILY, FONT_SIZE_XXS, "bold"),
+            fg_color=COLOR_GOLD,
+            hover_color=COLOR_GOLD_LIGHT,
+            text_color="#1a1a2e",
+            height=26,
+            width=90,
+            corner_radius=BORDER_RADIUS_SM,
+            command=lambda: webbrowser.open(
+                f"https://github.com/shaheerdev/isocortex/releases/tag/v{latest_version}"
+            ),
+        )
+        release_btn.pack(side="right", padx=(PADDING_SM, 0))
+
+        # Dismiss button
+        def _dismiss():
+            try:
+                if self._update_banner:
+                    self._update_banner.pack_forget()
+                    self._update_banner.destroy()
+                    self._update_banner = None
+            except Exception:
+                pass
+
+        dismiss_btn = ctk.CTkButton(
+            inner,
+            text="✕",
+            font=(FONT_FAMILY, FONT_SIZE_SMALL),
+            fg_color="transparent",
+            hover_color="#3a1515",
+            text_color=COLOR_TEXT_SECONDARY,
+            width=28,
+            height=28,
+            corner_radius=BORDER_RADIUS_SM,
+            command=_dismiss,
+        )
+        dismiss_btn.pack(side="right")
+
+    def _dismiss_update_banner(self):
+        """Dismiss the update banner (for the rest of the session)."""
+        if self._update_banner:
+            try:
+                self._update_banner.pack_forget()
+                self._update_banner.destroy()
+            except Exception:
+                pass
+            self._update_banner = None
 
     # ─────────────────────────────────────────────────────────────────
     # Toast Notifications
